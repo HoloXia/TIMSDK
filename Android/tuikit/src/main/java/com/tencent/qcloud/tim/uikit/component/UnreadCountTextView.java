@@ -11,10 +11,12 @@ import android.util.TypedValue;
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.utils.ScreenUtil;
 
+import androidx.appcompat.widget.AppCompatTextView;
 
-public class UnreadCountTextView extends android.support.v7.widget.AppCompatTextView {
 
-    private int mNormalSize = ScreenUtil.getPxByDp(16);
+public class UnreadCountTextView extends AppCompatTextView {
+
+    private int mNormalSize = ScreenUtil.getPxByDp(18.4f);
     private Paint mPaint;
 
     public UnreadCountTextView(Context context) {
@@ -36,13 +38,20 @@ public class UnreadCountTextView extends android.support.v7.widget.AppCompatText
         mPaint = new Paint();
         mPaint.setColor(getResources().getColor(R.color.read_dot_bg));
         setTextColor(Color.WHITE);
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.6f);
     }
 
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (getText().length() == 1) {
+        if (getText().length() == 0) {
+            // 没有字符，就在本View中心画一个小圆点
+            int l = (getMeasuredWidth() - ScreenUtil.getPxByDp(10)) / 2;
+            int t = l;
+            int r = getMeasuredWidth() - l;
+            int b = r;
+            canvas.drawOval(new RectF(l, t, r, b), mPaint);
+        } else if (getText().length() == 1) {
             canvas.drawOval(new RectF(0, 0, mNormalSize, mNormalSize), mPaint);
         } else if (getText().length() > 1) {
             canvas.drawRoundRect(new RectF(0, 0, getMeasuredWidth(), getMeasuredHeight()), getMeasuredHeight() / 2, getMeasuredHeight() / 2, mPaint);

@@ -6,15 +6,19 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
+
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.tencent.imsdk.TIMMessage;
-import com.tencent.imsdk.TIMTextElem;
+import com.tencent.imsdk.conversation.Conversation;
+import com.tencent.imsdk.v2.V2TIMConversation;
+import com.tencent.imsdk.v2.V2TIMTextElem;
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.base.IUIKitCallBack;
 import com.tencent.qcloud.tim.uikit.component.AudioPlayer;
@@ -25,8 +29,9 @@ import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.MessageLayout;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.MessageListAdapter;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfo;
 import com.tencent.qcloud.tim.uikit.utils.BackgroundTasks;
-import com.tencent.qcloud.tim.uikit.utils.NetWorkUtils;
 import com.tencent.qcloud.tim.uikit.utils.ToastUtil;
+
+import java.util.List;
 
 
 public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout {
@@ -34,6 +39,24 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
     protected MessageListAdapter mAdapter;
 
     private AnimationDrawable mVolumeAnim;
+    private Runnable mTypingRunnable = null;
+    private ChatProvider.TypingListener mTypingListener = new ChatProvider.TypingListener() {
+        @Override
+        public void onTyping() {
+            final String oldTitle = getTitleBar().getMiddleTitle().getText().toString();
+            getTitleBar().getMiddleTitle().setText(R.string.typing);
+            if (mTypingRunnable == null) {
+                mTypingRunnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        getTitleBar().getMiddleTitle().setText(oldTitle);
+                    }
+                };
+            }
+            getTitleBar().getMiddleTitle().removeCallbacks(mTypingRunnable);
+            getTitleBar().getMiddleTitle().postDelayed(mTypingRunnable, 3000);
+        }
+    };
 
     public AbsChatLayout(Context context) {
         super(context);
@@ -55,10 +78,15 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
                 if (clipboard == null || msg == null) {
                     return;
                 }
-                final TIMMessage timMsg = msg.getTIMMessage();
-                if (timMsg.getElement(0) instanceof TIMTextElem) {
-                    TIMTextElem textElem = (TIMTextElem) timMsg.getElement(0);
-                    ClipData clip = ClipData.newPlainText("message", textElem.getText());
+                if (msg.getMsgType() == MessageInfo.MSG_TYPE_TEXT) {
+                    V2TIMTextElem textElem = msg.getTimMessage().getTextElem();
+                    String copyContent;
+                    if (textElem == null) {
+                        copyContent = (String) msg.getExtra();
+                    } else {
+                        copyContent = textElem.getText();
+                    }
+                    ClipData clip = ClipData.newPlainText("message", copyContent);
                     clipboard.setPrimaryClip(clip);
                 }
             }
@@ -119,8 +147,9 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
                                 break;
                             }
                         }
-                        if (touchChild == null)
+                        if (touchChild == null) {
                             getInputLayout().hideSoftInput();
+                        }
                     }
                 }
                 return false;
@@ -139,7 +168,7 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
 
         getInputLayout().setChatInputHandler(new InputLayout.ChatInputHandler() {
             @Override
-            public void popupLayoutShow() {
+            public void onInputAreaClick() {
                 post(new Runnable() {
                     @Override
                     public void run() {
@@ -149,15 +178,31 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
             }
 
             @Override
-            public void popupLayoutHide() {
+            public void onRecordStatusChanged(int status) {
+                switch (status) {
+                    case RECORD_START:
+                        startRecording();
+                        break;
+                    case RECORD_STOP:
+                        stopRecording();
+                        break;
+                    case RECORD_CANCEL:
+                        cancelRecording();
+                        break;
+                    case RECORD_TOO_SHORT:
+                    case RECORD_FAILED:
+                        stopAbnormally(status);
+                        break;
+                    default:
+                        break;
+                }
             }
 
-            @Override
-            public void startRecording() {
+            private void startRecording() {
                 post(new Runnable() {
                     @Override
                     public void run() {
-                        AudioPlayer.getInstance().stopPlayRecord();
+                        AudioPlayer.getInstance().stopPlay();
                         mRecordingGroup.setVisibility(View.VISIBLE);
                         mRecordingIcon.setImageResource(R.drawable.recording_volume);
                         mVolumeAnim = (AnimationDrawable) mRecordingIcon.getDrawable();
@@ -168,8 +213,7 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
                 });
             }
 
-            @Override
-            public void stopRecording() {
+            private void stopRecording() {
                 postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -179,15 +223,18 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
                 }, 500);
             }
 
-            @Override
-            public void tooShortRecording() {
+            private void stopAbnormally(final int status) {
                 post(new Runnable() {
                     @Override
                     public void run() {
                         mVolumeAnim.stop();
                         mRecordingIcon.setImageResource(R.drawable.ic_volume_dialog_length_short);
                         mRecordingTips.setTextColor(Color.WHITE);
-                        mRecordingTips.setText("说话时间太短");
+                        if (status == RECORD_TOO_SHORT) {
+                            mRecordingTips.setText("说话时间太短");
+                        } else {
+                            mRecordingTips.setText("录音失败");
+                        }
                     }
                 });
                 postDelayed(new Runnable() {
@@ -198,8 +245,7 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
                 }, 1000);
             }
 
-            @Override
-            public void cancelRecording() {
+            private void cancelRecording() {
                 post(new Runnable() {
                     @Override
                     public void run() {
@@ -228,6 +274,7 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
                 AbsChatLayout.this.sendMessage(msg, false);
             }
         });
+        getInputLayout().clearCustomActionList();
         if (getMessageLayout().getAdapter() == null) {
             mAdapter = new MessageListAdapter();
             getMessageLayout().setAdapter(mAdapter);
@@ -245,8 +292,12 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
     }
 
     public void setDataProvider(IChatProvider provider) {
+        if (provider != null) {
+            ((ChatProvider) provider).setTypingListener(mTypingListener);
+        }
         if (mAdapter != null) {
             mAdapter.setDataSource(provider);
+            getChatManager().setLastMessageInfo(mAdapter.getItemCount() > 0 ? mAdapter.getItem(1) : null);
         }
     }
 
@@ -258,35 +309,22 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
     }
 
     public void loadChatMessages(final MessageInfo lastMessage) {
-        if (NetWorkUtils.sIMSDKConnected) {
-            getChatManager().loadChatMessages(lastMessage, new IUIKitCallBack() {
-                @Override
-                public void onSuccess(Object data) {
-                    if (lastMessage == null && data != null) {
-                        setDataProvider((ChatProvider) data);
-                    }
+        getChatManager().loadChatMessages(lastMessage, new IUIKitCallBack() {
+            @Override
+            public void onSuccess(Object data) {
+                if (lastMessage == null && data != null) {
+                    setDataProvider((ChatProvider) data);
                 }
+            }
 
-                @Override
-                public void onError(String module, int errCode, String errMsg) {
-                    ToastUtil.toastLongMessage(errMsg);
+            @Override
+            public void onError(String module, int errCode, String errMsg) {
+                ToastUtil.toastLongMessage(errMsg);
+                if (lastMessage == null) {
+                    setDataProvider(null);
                 }
-            });
-        } else {
-            getChatManager().loadLocalChatMessages(lastMessage, new IUIKitCallBack() {
-                @Override
-                public void onSuccess(Object data) {
-                    if (lastMessage == null && data != null) {
-                        setDataProvider((ChatProvider) data);
-                    }
-                }
-
-                @Override
-                public void onError(String module, int errCode, String errMsg) {
-                    ToastUtil.toastLongMessage(errMsg);
-                }
-            });
-        }
+            }
+        });
     }
 
     protected void deleteMessage(int position, MessageInfo msg) {
@@ -320,8 +358,9 @@ public abstract class AbsChatLayout extends ChatLayoutUI implements IChatLayout 
 
     @Override
     public void exitChat() {
+        getTitleBar().getMiddleTitle().removeCallbacks(mTypingRunnable);
         AudioPlayer.getInstance().stopRecord();
-        AudioPlayer.getInstance().stopPlayRecord();
+        AudioPlayer.getInstance().stopPlay();
         if (getChatManager() != null) {
             getChatManager().destroyChat();
         }

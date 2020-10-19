@@ -1,16 +1,18 @@
 package com.tencent.qcloud.tim.uikit.modules.group.info;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.tencent.qcloud.tim.uikit.R;
+import com.tencent.qcloud.tim.uikit.base.BaseFragment;
 import com.tencent.qcloud.tim.uikit.modules.group.member.GroupMemberDeleteFragment;
 import com.tencent.qcloud.tim.uikit.modules.group.member.GroupMemberInviteFragment;
 import com.tencent.qcloud.tim.uikit.modules.group.member.GroupMemberManagerFragment;
-import com.tencent.qcloud.tim.uikit.base.BaseFragment;
 import com.tencent.qcloud.tim.uikit.modules.group.member.IGroupMemberRouter;
 import com.tencent.qcloud.tim.uikit.utils.TUIKitConstants;
 

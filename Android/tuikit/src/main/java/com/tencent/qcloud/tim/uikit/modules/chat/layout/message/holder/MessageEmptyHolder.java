@@ -4,7 +4,6 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import com.tencent.imsdk.TIMMessage;
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfo;
 import com.tencent.qcloud.tim.uikit.utils.DateTimeUtil;
@@ -27,12 +26,6 @@ public abstract class MessageEmptyHolder extends MessageBaseHolder {
 
     public abstract int getVariableLayout();
 
-    private void initVariableLayout() {
-        if (getVariableLayout() != 0) {
-            setVariableLayout(getVariableLayout());
-        }
-    }
-
     private void setVariableLayout(int resId) {
         if (msgContentFrame.getChildCount() == 0) {
             View.inflate(rootView.getContext(), resId, msgContentFrame);
@@ -40,12 +33,18 @@ public abstract class MessageEmptyHolder extends MessageBaseHolder {
         initVariableViews();
     }
 
+    private void initVariableLayout() {
+        if (getVariableLayout() != 0) {
+            setVariableLayout(getVariableLayout());
+        }
+    }
+
     public abstract void initVariableViews();
 
+    @Override
     public void layoutViews(final MessageInfo msg, final int position) {
 
         //// 时间线设置
-        final TIMMessage timMsg = msg.getTIMMessage();
         if (properties.getChatTimeBubble() != null) {
             chatTimeText.setBackground(properties.getChatTimeBubble());
         }
@@ -57,18 +56,18 @@ public abstract class MessageEmptyHolder extends MessageBaseHolder {
         }
 
         if (position > 1) {
-            TIMMessage last = mAdapter.getItem(position - 1).getTIMMessage();
+            MessageInfo last = mAdapter.getItem(position - 1);
             if (last != null) {
-                if (timMsg.timestamp() - last.timestamp() >= 5 * 60) {
+                if (msg.getMsgTime() - last.getMsgTime() >= 5 * 60) {
                     chatTimeText.setVisibility(View.VISIBLE);
-                    chatTimeText.setText(DateTimeUtil.getTimeFormatText(new Date(timMsg.timestamp() * 1000)));
+                    chatTimeText.setText(DateTimeUtil.getTimeFormatText(new Date(msg.getMsgTime() * 1000)));
                 } else {
                     chatTimeText.setVisibility(View.GONE);
                 }
             }
         } else {
             chatTimeText.setVisibility(View.VISIBLE);
-            chatTimeText.setText(DateTimeUtil.getTimeFormatText(new Date(timMsg.timestamp() * 1000)));
+            chatTimeText.setText(DateTimeUtil.getTimeFormatText(new Date(msg.getMsgTime() * 1000)));
         }
     }
 

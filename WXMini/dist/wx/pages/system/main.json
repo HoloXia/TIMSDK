@@ -1,6 +1,5 @@
 {
-  "navigationBarTitleText": "群系统消息",
-  "navigationBarBackgroundColor": "#E7E9EA",
+  "navigationBarTitleText": "系统通知",
   "usingComponents": {
     "i-avatar": "../../../static/iview/avatar/index",
     "i-row": "../../../static/iview/row/index",

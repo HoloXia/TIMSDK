@@ -5,14 +5,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.TypedValue;
 import android.view.View;
 
-import com.tencent.qcloud.tim.uikit.utils.TUIKitLog;
-
 import java.util.List;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 /**
  * 介绍：分类、悬停的Decoration
@@ -21,16 +20,14 @@ import java.util.List;
 public class SuspensionDecoration extends RecyclerView.ItemDecoration {
 
     private static final String TAG = SuspensionDecoration.class.getSimpleName();
-
+    private static int COLOR_TITLE_BG = Color.parseColor("#FFEDEDED");
+    private static int COLOR_TITLE_BOTTOM_LINE = Color.parseColor("#FFCACACA");
+    private static int COLOR_TITLE_FONT = Color.parseColor("#FF888888");
+    private int mTitleFontSize;//title字体大小
     private List<? extends ISuspensionInterface> mDatas;
     private Paint mPaint;
     private Rect mBounds;//用于存放测量文字Rect
-
     private int mTitleHeight;//title的高
-    private static int COLOR_TITLE_BG = Color.parseColor("#EDEDED");
-    private static int COLOR_TITLE_FONT = Color.parseColor("#FF999999");
-    private static int mTitleFontSize;//title字体大小
-
     private int mHeaderViewCount = 0;
 
 
@@ -39,8 +36,8 @@ public class SuspensionDecoration extends RecyclerView.ItemDecoration {
         mDatas = datas;
         mPaint = new Paint();
         mBounds = new Rect();
-        mTitleHeight = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 30, context.getResources().getDisplayMetrics());
-        mTitleFontSize = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12, context.getResources().getDisplayMetrics());
+        mTitleHeight = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 33f, context.getResources().getDisplayMetrics());
+        mTitleFontSize = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 13f, context.getResources().getDisplayMetrics());
         mPaint.setTextSize(mTitleFontSize);
         mPaint.setAntiAlias(true);
     }
@@ -127,10 +124,13 @@ public class SuspensionDecoration extends RecyclerView.ItemDecoration {
     private void drawTitleArea(Canvas c, int left, int right, View child, RecyclerView.LayoutParams params, int position) {//最先调用，绘制在最下层
         mPaint.setColor(COLOR_TITLE_BG);
         c.drawRect(left, child.getTop() - params.topMargin - mTitleHeight, right, child.getTop() - params.topMargin, mPaint);
-        mPaint.setColor(COLOR_TITLE_FONT);
 
+        mPaint.setColor(COLOR_TITLE_BOTTOM_LINE);
+        c.drawRect(left, child.getTop() - params.topMargin - 1, right, child.getTop() - params.topMargin, mPaint);
+
+        mPaint.setColor(COLOR_TITLE_FONT);
         mPaint.getTextBounds(mDatas.get(position).getSuspensionTag(), 0, mDatas.get(position).getSuspensionTag().length(), mBounds);
-        c.drawText(mDatas.get(position).getSuspensionTag(), child.getPaddingLeft() + 40, child.getTop() - params.topMargin - (mTitleHeight / 2 - mBounds.height() / 2), mPaint);
+        c.drawText(mDatas.get(position).getSuspensionTag(), child.getPaddingLeft() + 61, child.getTop() - params.topMargin - (mTitleHeight / 2 - mBounds.height() / 2), mPaint);
     }
 
     @Override

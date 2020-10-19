@@ -1,12 +1,11 @@
 package com.tencent.qcloud.tim.uikit.modules.chat.layout.input;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.FragmentManager;
+import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
-import android.support.annotation.Nullable;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -17,7 +16,17 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentManager;
+
+import com.tencent.imsdk.v2.V2TIMConversation;
+import com.tencent.liteav.SelectContactActivity;
+import com.tencent.liteav.login.UserModel;
+import com.tencent.liteav.model.ITRTCAVCall;
+import com.tencent.liteav.trtcaudiocalldemo.ui.TRTCAudioCallActivity;
+import com.tencent.liteav.trtcvideocalldemo.ui.TRTCVideoCallActivity;
 import com.tencent.qcloud.tim.uikit.R;
+import com.tencent.qcloud.tim.uikit.TUIKitImpl;
 import com.tencent.qcloud.tim.uikit.base.IUIKitCallBack;
 import com.tencent.qcloud.tim.uikit.component.AudioPlayer;
 import com.tencent.qcloud.tim.uikit.component.face.Emoji;
@@ -25,42 +34,51 @@ import com.tencent.qcloud.tim.uikit.component.face.FaceFragment;
 import com.tencent.qcloud.tim.uikit.component.face.FaceManager;
 import com.tencent.qcloud.tim.uikit.component.video.CameraActivity;
 import com.tencent.qcloud.tim.uikit.component.video.JCameraView;
+import com.tencent.qcloud.tim.uikit.config.TUIKitConfigs;
 import com.tencent.qcloud.tim.uikit.modules.chat.base.BaseInputFragment;
+import com.tencent.qcloud.tim.uikit.modules.chat.interfaces.IChatLayout;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.inputmore.InputMoreFragment;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfo;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfoUtil;
+import com.tencent.qcloud.tim.uikit.utils.PermissionUtils;
 import com.tencent.qcloud.tim.uikit.utils.TUIKitConstants;
 import com.tencent.qcloud.tim.uikit.utils.TUIKitLog;
 import com.tencent.qcloud.tim.uikit.utils.ToastUtil;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 聊天界面，底部发送图片、拍照、摄像、文件面板
  */
 
-public class InputLayout extends InputLayoutUI implements View.OnClickListener, AudioPlayer.AudioRecordCallback, TextWatcher {
+public class InputLayout extends InputLayoutUI implements View.OnClickListener, TextWatcher {
 
     private static final String TAG = InputLayout.class.getSimpleName();
-
-    private FaceFragment mFaceFragment;
-    private ChatInputHandler mChatInputHandler;
-    private MessageHandler mMessageHandler;
-    private FragmentManager mFragmentManager;
-    private InputMoreFragment mInputMoreFragment;
-
     private static final int STATE_NONE_INPUT = -1;
     private static final int STATE_SOFT_INPUT = 0;
     private static final int STATE_VOICE_INPUT = 1;
     private static final int STATE_FACE_INPUT = 2;
     private static final int STATE_ACTION_INPUT = 3;
-
+    private FaceFragment mFaceFragment;
+    private ChatInputHandler mChatInputHandler;
+    private MessageHandler mMessageHandler;
+    private FragmentManager mFragmentManager;
+    private InputMoreFragment mInputMoreFragment;
+    private IChatLayout mChatLayout;
     private boolean mSendEnable;
     private boolean mAudioCancel;
     private int mCurrentState;
     private int mLastMsgLineCount;
     private float mStartRecordY;
     private String mInputContent;
+    private onStartActivityListener mStartActivityListener;
+
+    private Map<String,String> atUserInfoMap = new HashMap<>();
+    private String displayInputString;
 
     public InputLayout(Context context) {
         super(context);
@@ -75,6 +93,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
     }
 
     @SuppressLint("ClickableViewAccessibility")
+    @Override
     protected void init() {
 
         mAudioInputSwitchButton.setOnClickListener(this);
@@ -116,21 +135,26 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
                         mAudioCancel = true;
                         mStartRecordY = motionEvent.getY();
                         if (mChatInputHandler != null) {
-                            mChatInputHandler.startRecording();
+                            mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_START);
                         }
                         mSendAudioButton.setText("松开结束");
-                        AudioPlayer.getInstance().startRecord(InputLayout.this);
+                        AudioPlayer.getInstance().startRecord(new AudioPlayer.Callback() {
+                            @Override
+                            public void onCompletion(Boolean success) {
+                                recordComplete(success);
+                            }
+                        });
                         break;
                     case MotionEvent.ACTION_MOVE:
                         if (motionEvent.getY() - mStartRecordY < -100) {
                             mAudioCancel = true;
                             if (mChatInputHandler != null) {
-                                mChatInputHandler.cancelRecording();
+                                mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_CANCEL);
                             }
                         } else {
                             if (mAudioCancel) {
                                 if (mChatInputHandler != null) {
-                                    mChatInputHandler.startRecording();
+                                    mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_START);
                                 }
                             }
                             mAudioCancel = false;
@@ -141,15 +165,73 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
                     case MotionEvent.ACTION_UP:
                         mAudioCancel = motionEvent.getY() - mStartRecordY < -100;
                         if (mChatInputHandler != null) {
-                            mChatInputHandler.stopRecording();
+                            mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_STOP);
                         }
                         AudioPlayer.getInstance().stopRecord();
                         mSendAudioButton.setText("按住说话");
+                        break;
+                    default:
                         break;
                 }
                 return false;
             }
         });
+
+        mTextInput.setOnMentionInputListener(new TIMMentionEditText.OnMentionInputListener() {
+            @Override
+            public void onMentionCharacterInput(String tag) {
+                if (tag.equals(TIMMentionEditText.TIM_METION_TAG) && mChatLayout.getChatInfo().getType() == V2TIMConversation.V2TIM_GROUP) {
+                    mStartActivityListener.onStartGroupMemberSelectActivity();
+                }
+            }
+        });
+    }
+
+    public void updateInputText(String names, String ids){
+        if (names == null || ids == null || names.isEmpty() || ids.isEmpty()){
+            return;
+        }
+
+        updateAtUserInfoMap(names, ids);
+        if (mTextInput != null) {
+            mTextInput.setText(mTextInput.getText() + displayInputString);
+            mTextInput.setSelection(mTextInput.getText().length());
+        }
+    }
+
+    private void updateAtUserInfoMap(String names, String ids){
+        atUserInfoMap.clear();
+        displayInputString = "";
+
+        String[] listName = names.split(" ");
+        String[] listId = ids.split(" ");
+
+        //此处防止昵称和ID不对等
+        boolean isListName = (listName.length >= listId.length ? true : false);
+        int i = 0;
+        if (isListName) {
+            for (i =0; i < listId.length; i++) {
+                atUserInfoMap.put(listName[i], listId[i]);
+
+                //for display
+                displayInputString += listName[i];
+                displayInputString += " ";
+                displayInputString += TIMMentionEditText.TIM_METION_TAG;
+            }
+        }else {
+            for (i =0; i < listName.length; i++) {
+                atUserInfoMap.put(listName[i], listId[i]);
+
+                //for display
+                displayInputString += listName[i];
+                displayInputString += " ";
+                displayInputString += TIMMentionEditText.TIM_METION_TAG;
+            }
+        }
+
+        if(!displayInputString.isEmpty()) {
+            displayInputString = displayInputString.substring(0, displayInputString.length() - 1);
+        }
     }
 
     @Override
@@ -277,13 +359,76 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
         mInputMoreFragment.startActivityForResult(intent, InputMoreFragment.REQUEST_CODE_FILE);
     }
 
+    @Override
+    public void startAudioCall() {
+        if (!PermissionUtils.checkPermission(mActivity, Manifest.permission.RECORD_AUDIO)) {
+            TUIKitLog.i(TAG, "startAudioCall checkPermission failed");
+            return;
+        }
+        if (mChatLayout.getChatInfo().getType() == V2TIMConversation.V2TIM_C2C) {
+            List<UserModel> contactList = new ArrayList<>();
+            UserModel model = new UserModel();
+            model.userId = mChatLayout.getChatInfo().getId();
+            model.userName = mChatLayout.getChatInfo().getChatName();
+            model.userSig = TUIKitConfigs.getConfigs().getGeneralConfig().getUserSig();
+            contactList.add(model);
+            TRTCAudioCallActivity.startCallSomeone(mActivity.getApplicationContext(), contactList);
+        } else {
+            SelectContactActivity.start(mActivity.getApplicationContext(), mChatLayout.getChatInfo().getId(), ITRTCAVCall.TYPE_AUDIO_CALL);
+        }
+    }
+
+    @Override
+    protected void startVideoCall() {
+        if (!(PermissionUtils.checkPermission(mActivity, Manifest.permission.CAMERA)
+                && PermissionUtils.checkPermission(mActivity, Manifest.permission.RECORD_AUDIO))) {
+            TUIKitLog.i(TAG, "startVideoCall checkPermission failed");
+            return;
+        }
+        if (mChatLayout.getChatInfo().getType() == V2TIMConversation.V2TIM_C2C) {
+            List<UserModel> contactList = new ArrayList<>();
+            UserModel model = new UserModel();
+            model.userId = mChatLayout.getChatInfo().getId();
+            model.userName = mChatLayout.getChatInfo().getChatName();
+            model.userSig = TUIKitConfigs.getConfigs().getGeneralConfig().getUserSig();
+            contactList.add(model);
+            TRTCVideoCallActivity.startCallSomeone(mActivity.getApplicationContext(), contactList);
+        } else {
+            SelectContactActivity.start(mActivity.getApplicationContext(), mChatLayout.getChatInfo().getId(), ITRTCAVCall.TYPE_VIDEO_CALL);
+        }
+    }
+
+    @Override
+    protected void startGroupLive() {
+        if (mStartActivityListener != null) {
+            boolean isHandle = mStartActivityListener.handleStartGroupLiveActivity();
+            if (!isHandle) {
+                startDefaultGroupLiveAnchor();
+            }
+        } else {
+            startDefaultGroupLiveAnchor();
+        }
+    }
+
+    private void startDefaultGroupLiveAnchor() {
+        Intent intent = new Intent();
+        intent.setAction("com.tencent.qcloud.tim.tuikit.live.grouplive.anchor");
+        intent.addCategory("android.intent.category.DEFAULT");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra("group_id", mChatLayout.getChatInfo().getId());
+        TUIKitImpl.getAppContext().startActivity(intent);
+    }
+
     public void setChatInputHandler(ChatInputHandler handler) {
         this.mChatInputHandler = handler;
     }
 
-
     public void setMessageHandler(MessageHandler handler) {
         this.mMessageHandler = handler;
+    }
+
+    public void setStartActivityListener(onStartActivityListener listener) {
+        this.mStartActivityListener = listener;
     }
 
     @Override
@@ -363,15 +508,40 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
         } else if (view.getId() == R.id.send_btn) {
             if (mSendEnable) {
                 if (mMessageHandler != null) {
-                    mMessageHandler.sendMessage(MessageInfoUtil.buildTextMessage(mTextInput.getText().toString().trim()));
+                    if(mChatLayout.getChatInfo().getType() == V2TIMConversation.V2TIM_GROUP && !atUserInfoMap.isEmpty()) {
+                        //发送时通过获取输入框匹配上@的昵称list，去从map中获取ID list。
+                        List<String> atUserList = updateAtUserList(mTextInput.getMentionList(true));
+                        if (atUserList == null || atUserList.isEmpty()) {
+                            mMessageHandler.sendMessage(MessageInfoUtil.buildTextMessage(mTextInput.getText().toString().trim()));
+                        }else {
+                            mMessageHandler.sendMessage(MessageInfoUtil.buildTextAtMessage(atUserList, mTextInput.getText().toString().trim()));
+                        }
+                    }else {
+                        mMessageHandler.sendMessage(MessageInfoUtil.buildTextMessage(mTextInput.getText().toString().trim()));
+                    }
                 }
                 mTextInput.setText("");
             }
         }
     }
 
+    private List<String> updateAtUserList(List<String> atMentionList){
+        if (atMentionList == null || atMentionList.isEmpty()){
+            return null;
+        }
+
+        List<String> atUserIdList = new ArrayList<>();
+        for (String name : atMentionList){
+            if (atUserInfoMap.containsKey(name)){
+                atUserIdList.add(atUserInfoMap.get(name));
+            }
+        }
+
+        return atUserIdList;
+    }
+
     private void showSoftInput() {
-        TUIKitLog.i(TAG, "showSoftInput");
+        TUIKitLog.v(TAG, "showSoftInput");
         hideInputMoreLayout();
         mAudioInputSwitchButton.setImageResource(R.drawable.action_audio_selector);
         mEmojiInputButton.setImageResource(R.drawable.ic_input_face_normal);
@@ -382,7 +552,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
             postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    mChatInputHandler.popupLayoutShow();
+                    mChatInputHandler.onInputAreaClick();
                 }
             }, 200);
         }
@@ -393,16 +563,13 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
         InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(mTextInput.getWindowToken(), 0);
         mTextInput.clearFocus();
-        if (mChatInputHandler != null) {
-            mChatInputHandler.popupLayoutHide();
-        }
         mInputMoreView.setVisibility(View.GONE);
     }
 
     private void showFaceViewGroup() {
         TUIKitLog.i(TAG, "showFaceViewGroup");
         if (mFragmentManager == null) {
-            mFragmentManager = mActivity.getFragmentManager();
+            mFragmentManager = mActivity.getSupportFragmentManager();
         }
         if (mFaceFragment == null) {
             mFaceFragment = new FaceFragment();
@@ -416,8 +583,9 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
                 int index = mTextInput.getSelectionStart();
                 Editable editable = mTextInput.getText();
                 boolean isFace = false;
-                if (index <= 0)
+                if (index <= 0) {
                     return;
+                }
                 if (editable.charAt(index - 1) == ']') {
                     for (int i = index - 2; i >= 0; i--) {
                         if (editable.charAt(i) == '[') {
@@ -440,7 +608,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
                 int index = mTextInput.getSelectionStart();
                 Editable editable = mTextInput.getText();
                 editable.insert(index, emoji.getFilter());
-                FaceManager.handlerEmojiText(mTextInput, editable.toString());
+                FaceManager.handlerEmojiText(mTextInput, editable.toString(), true);
             }
 
             @Override
@@ -453,7 +621,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
             postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    mChatInputHandler.popupLayoutShow();
+                    mChatInputHandler.onInputAreaClick();
                 }
             }, 100);
         }
@@ -462,7 +630,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
     private void showCustomInputMoreFragment() {
         TUIKitLog.i(TAG, "showCustomInputMoreFragment");
         if (mFragmentManager == null) {
-            mFragmentManager = mActivity.getFragmentManager();
+            mFragmentManager = mActivity.getSupportFragmentManager();
         }
         BaseInputFragment fragment = (BaseInputFragment) mMoreInputEvent;
         hideSoftInput();
@@ -472,7 +640,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
             postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    mChatInputHandler.popupLayoutShow();
+                    mChatInputHandler.onInputAreaClick();
                 }
             }, 100);
         }
@@ -481,7 +649,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
     private void showInputMoreLayout() {
         TUIKitLog.i(TAG, "showInputMoreLayout");
         if (mFragmentManager == null) {
-            mFragmentManager = mActivity.getFragmentManager();
+            mFragmentManager = mActivity.getSupportFragmentManager();
         }
         if (mInputMoreFragment == null) {
             mInputMoreFragment = new InputMoreFragment();
@@ -496,7 +664,7 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
             postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    mChatInputHandler.popupLayoutShow();
+                    mChatInputHandler.onInputAreaClick();
                 }
             }, 100);
         }
@@ -506,23 +674,27 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
         mInputMoreView.setVisibility(View.GONE);
     }
 
-    @Override
-    public void recordComplete(long duration) {
+    private void recordComplete(boolean success) {
+        int duration = AudioPlayer.getInstance().getDuration();
         TUIKitLog.i(TAG, "recordComplete duration:" + duration);
         if (mChatInputHandler != null) {
+            if (!success || duration == 0) {
+                mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_FAILED);
+                return;
+            }
             if (mAudioCancel) {
-                mChatInputHandler.stopRecording();
+                mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_CANCEL);
                 return;
             }
             if (duration < 1000) {
-                mChatInputHandler.tooShortRecording();
+                mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_TOO_SHORT);
                 return;
             }
-            mChatInputHandler.stopRecording();
+            mChatInputHandler.onRecordStatusChanged(ChatInputHandler.RECORD_STOP);
         }
 
-        if (mMessageHandler != null) {
-            mMessageHandler.sendMessage(MessageInfoUtil.buildAudioMessage(AudioPlayer.getInstance().getRecordAudioPath(), (int) duration));
+        if (mMessageHandler != null && success) {
+            mMessageHandler.sendMessage(MessageInfoUtil.buildAudioMessage(AudioPlayer.getInstance().getPath(), duration));
         }
     }
 
@@ -549,15 +721,18 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
             if (mTextInput.getLineCount() != mLastMsgLineCount) {
                 mLastMsgLineCount = mTextInput.getLineCount();
                 if (mChatInputHandler != null) {
-                    mChatInputHandler.popupLayoutShow();
+                    mChatInputHandler.onInputAreaClick();
                 }
             }
             if (!TextUtils.equals(mInputContent, mTextInput.getText().toString())) {
-                FaceManager.handlerEmojiText(mTextInput, mTextInput.getText().toString());
+                FaceManager.handlerEmojiText(mTextInput, mTextInput.getText().toString(), true);
             }
         }
     }
 
+    public void setChatLayout(IChatLayout chatLayout) {
+        mChatLayout = chatLayout;
+    }
 
     public interface MessageHandler {
         void sendMessage(MessageInfo msg);
@@ -565,17 +740,21 @@ public class InputLayout extends InputLayoutUI implements View.OnClickListener, 
 
     public interface ChatInputHandler {
 
-        void popupLayoutShow();
+        int RECORD_START = 1;
+        int RECORD_STOP = 2;
+        int RECORD_CANCEL = 3;
+        int RECORD_TOO_SHORT = 4;
+        int RECORD_FAILED = 5;
 
-        void popupLayoutHide();
+        void onInputAreaClick();
 
-        void startRecording();
+        void onRecordStatusChanged(int status);
+    }
 
-        void stopRecording();
+    public interface onStartActivityListener {
+        void onStartGroupMemberSelectActivity();
 
-        void tooShortRecording();
-
-        void cancelRecording();
+        boolean handleStartGroupLiveActivity();
     }
 
 }

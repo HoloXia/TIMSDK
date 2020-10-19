@@ -1,5 +1,6 @@
 import { formatTime } from '../../utils/index'
 import { decodeElement } from '../../utils/decodeElement'
+import TIM from 'tim-wx-sdk'
 
 const conversationModules = {
   state: {
@@ -8,7 +9,6 @@ const conversationModules = {
     currentConversation: {}, // 当前聊天对话信息
     currentMessageList: [], // 当前聊天消息列表
     nextReqMessageID: '', // 下一条消息标志
-    imageUrls: [], // 当前会话中已加载信息所有的图片链接
     isCompleted: false, // 当前会话消息是否已经请求完毕
     isLoading: false // 是否正在请求
   },
@@ -42,59 +42,44 @@ const conversationModules = {
     },
     currentConversation: state => state.currentConversation,
     currentMessageList: state => state.currentMessageList,
-    imageUrls: state => state.imageUrls
+    totalUnreadCount: state => {
+      const result = state.allConversation.reduce((count, { unreadCount }) => count + unreadCount, 0)
+      if (result === 0) {
+        wx.removeTabBarBadge({ index: 0 })
+      } else {
+        wx.setTabBarBadge({ index: 0, text: result > 99 ? '99+' : String(result) })
+      }
+      return result
+    }
   },
   mutations: {
     // 历史头插消息列表
+    // 小程序问题，在渲染的时候模板引擎不能处理函数，所以只能在渲染前处理好message的展示问题
     unshiftMessageList (state, messageList) {
       let list = [...messageList]
-      let urls = []
       for (let i = 0; i < list.length; i++) {
         let message = list[i]
-        list[i].virtualDom = decodeElement(message.elements[0])
-        if (message.type === 'TIMImageElem') {
-          let url = message.payload.imageInfoArray[1].url
-          url = url.slice(0, 2) === '//' ? `https:${url}` : url
-          urls.push(url)
-        }
+        list[i].virtualDom = decodeElement(message)
         let date = new Date(message.time * 1000)
         list[i].newtime = formatTime(date)
       }
-      state.imageUrls = [...urls, ...state.imageUrls]
       state.currentMessageList = [...list, ...state.currentMessageList]
     },
     // 收到
     receiveMessage (state, messageList) {
       let list = [...messageList]
-      let urls = []
       for (let i = 0; i < list.length; i++) {
-        let item = list[i]
-        list[i].virtualDom = decodeElement(item.elements[0])
-        let date = new Date(item.time * 1000)
+        let message = list[i]
+        list[i].virtualDom = decodeElement(message)
+        let date = new Date(message.time * 1000)
         list[i].newtime = formatTime(date)
-        if (item.type === 'TIMImageElem') {
-          let url = item.elements[0].content.imageInfoArray[1].url
-          url = url.slice(0, 2) === '//' ? `https:${url}` : url
-          urls.push(url)
-        }
       }
-      state.imageUrls = [...state.imageUrls, ...urls]
       state.currentMessageList = [...state.currentMessageList, ...list]
-      setTimeout(() => {
-        wx.pageScrollTo({
-          scrollTop: 99999
-        })
-      }, 800)
     },
     sendMessage (state, message) {
-      message.virtualDom = decodeElement(message.elements[0])
+      message.virtualDom = decodeElement(message)
       let date = new Date(message.time * 1000)
       message.newtime = formatTime(date)
-      if (message.type === 'TIMImageElem') {
-        let url = message.payload.imageInfoArray[1].url
-        url = url.slice(0, 2) === '//' ? `https:${url}` : url
-        state.imageUrls.push(url)
-      }
       state.currentMessageList.push(message)
       setTimeout(() => {
         wx.pageScrollTo({
@@ -123,7 +108,6 @@ const conversationModules = {
       state.currentConversation = {} // 当前聊天对话信息
       state.currentMessageList = [] // 当前聊天消息列表
       state.nextReqMessageID = '' // 下一条消息标志
-      state.imageUrls = [] // 当前会话中已加载信息所有的图片链接
       state.isCompleted = false // 当前会话消息是否已经请求完毕
       state.isLoading = false // 是否正在请求
     },
@@ -135,37 +119,11 @@ const conversationModules = {
     },
     changeMessageStatus (state, index) {
       state.currentMessageList[index].status = 'fail'
-    },
-    offAtRemind (state, conversation) {
-      let item = state.allConversation.filter(item => item.conversationID === conversation.conversationID)[0]
-      item.lastMessage.at = false
     }
   },
   actions: {
     // 消息事件
     onMessageEvent (context, event) {
-      let messageList = event.data
-      const atTextMessageList = messageList.filter(
-        message =>
-          message.type === 'TIMTextElem' &&
-          message.payload.text.includes('@')
-      )
-      for (let i = 0; i < atTextMessageList.length; i++) {
-        const message = atTextMessageList[i]
-        const matched = message.payload.text.match(/@\w+/g)
-        if (!matched) {
-          continue
-        }
-        // @ 我的
-        if (matched.includes(`@${context.getters.myInfo.userID}`)) {
-          // TODO: notification
-          context.state.allConversation.filter((item) => {
-            if (item.conversationID === message.conversationID) {
-              item.lastMessage.at = true
-            }
-          })
-        }
-      }
       if (event.name === 'onMessageReceived') {
         let id = context.state.currentConversationID
         if (!id) {
@@ -183,8 +141,9 @@ const conversationModules = {
     // 获取消息列表
     getMessageList (context) {
       const {currentConversationID, nextReqMessageID} = context.state
-      // 判断是否拉完了
+      // 判断是否拉完了，isCompleted 的话要报一下没有更多了
       if (!context.state.isCompleted) {
+        // 如果请求还没回来，又拉，此时做一下防御
         if (!context.state.isLoading) {
           context.state.isLoading = true
           wx.$app.getMessageList({ conversationID: currentConversationID, nextReqMessageID: nextReqMessageID, count: 15 }).then(res => {
@@ -192,11 +151,6 @@ const conversationModules = {
             context.commit('unshiftMessageList', res.data.messageList)
             if (res.data.isCompleted) {
               context.state.isCompleted = true
-              wx.showToast({
-                title: '更新成功',
-                icon: 'none',
-                duration: 1500
-              })
             }
             context.state.isLoading = false
           }).catch(err => {
@@ -216,6 +170,28 @@ const conversationModules = {
           duration: 1500
         })
       }
+    },
+    checkoutConversation (context, conversationID) {
+      context.commit('resetCurrentConversation')
+      wx.$app.setMessageRead({ conversationID })
+      return wx.$app.getConversationProfile(conversationID)
+        .then(({ data: { conversation } }) => {
+          context.commit('updateCurrentConversation', conversation)
+          context.dispatch('getMessageList')
+          let name = ''
+          switch (conversation.type) {
+            case TIM.TYPES.CONV_C2C:
+              name = conversation.userProfile.nick || conversation.userProfile.userID
+              break
+            case TIM.TYPES.CONV_GROUP:
+              name = conversation.groupProfile.name || conversation.groupProfile.groupID
+              break
+            default:
+              name = '系统通知'
+          }
+          wx.navigateTo({ url: `../chat/main?toAccount=${name}&type=${conversation.type}` })
+          return Promise.resolve()
+        })
     }
   }
 }

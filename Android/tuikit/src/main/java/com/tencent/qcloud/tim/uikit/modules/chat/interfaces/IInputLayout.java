@@ -1,6 +1,7 @@
 package com.tencent.qcloud.tim.uikit.modules.chat.interfaces;
 
 import android.view.View;
+import android.widget.EditText;
 
 import com.tencent.qcloud.tim.uikit.modules.chat.base.BaseInputFragment;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.input.InputLayout;
@@ -77,10 +78,21 @@ public interface IInputLayout {
      */
     void disableSendFileAction(boolean disable);
 
+    boolean enableAudioCall();
+
+    boolean enableVideoCall();
+
     /**
      * 增加更多面板上的事件单元
      *
      * @param action 事件单元 {@link InputMoreActionUnit}，可以自定义显示的图片、标题以及点击事件
      */
     void addAction(InputMoreActionUnit action);
+
+    /**
+     * 获取输入框View
+     *
+     * @return 输入框EditText
+     */
+    EditText getInputText();
 }

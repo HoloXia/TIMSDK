@@ -2,7 +2,7 @@
   <div>
     <el-row class="friend-item-container">
       <el-col :span="6">
-        <avatar :src="friend.profile.avatar" text="F" />
+        <avatar :src="friend.profile.avatar" />
       </el-col>
       <el-col :span="18">
         <div class="friend-name">{{friend.profile.nick||friend.userID}}</div>
@@ -24,10 +24,16 @@ export default {
       this.tim.getConversationProfile(`C2C${this.friend.userID}`).then(({data})=>{
         this.$store.commit('updateCurrentConversation', data)
       })
+      .catch(error => {
+          this.$store.commit('showMessage', {
+            type: 'error',
+            message: error.message
+          })
+        })
     }
   }
 }
 </script>
 
-<style>
+<style lang="stylus" scoped>
 </style>

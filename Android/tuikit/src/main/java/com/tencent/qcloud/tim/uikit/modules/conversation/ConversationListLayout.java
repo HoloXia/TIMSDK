@@ -1,17 +1,18 @@
 package com.tencent.qcloud.tim.uikit.modules.conversation;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.DividerItemDecoration;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.util.AttributeSet;
 import android.view.View;
 
 import com.tencent.qcloud.tim.uikit.component.CustomLinearLayoutManager;
+import com.tencent.qcloud.tim.uikit.modules.conversation.base.ConversationInfo;
 import com.tencent.qcloud.tim.uikit.modules.conversation.interfaces.IConversationAdapter;
 import com.tencent.qcloud.tim.uikit.modules.conversation.interfaces.IConversationListLayout;
-import com.tencent.qcloud.tim.uikit.modules.conversation.base.ConversationInfo;
 
 public class ConversationListLayout extends RecyclerView implements IConversationListLayout {
 
@@ -43,16 +44,9 @@ public class ConversationListLayout extends RecyclerView implements IConversatio
     }
 
     @Override
-    public void setAdapter(IConversationAdapter adapter) {
-        super.setAdapter(adapter);
-        mAdapter = (ConversationListAdapter) adapter;
-    }
-
-    @Override
     public void setBackground(int resId) {
         setBackgroundColor(resId);
     }
-
 
     @Override
     public void disableItemUnreadDot(boolean flag) {
@@ -60,8 +54,8 @@ public class ConversationListLayout extends RecyclerView implements IConversatio
     }
 
     @Override
-    public void enableItemRoundIcon(boolean flag) {
-        mAdapter.enableItemRoundIcon(flag);
+    public void setItemAvatarRadius(int radius) {
+        mAdapter.setItemAvatarRadius(radius);
     }
 
     @Override
@@ -87,6 +81,12 @@ public class ConversationListLayout extends RecyclerView implements IConversatio
     @Override
     public ConversationListAdapter getAdapter() {
         return mAdapter;
+    }
+
+    @Override
+    public void setAdapter(IConversationAdapter adapter) {
+        super.setAdapter(adapter);
+        mAdapter = (ConversationListAdapter) adapter;
     }
 
     @Override

@@ -1,8 +1,6 @@
 package com.tencent.qcloud.tim.uikit.component;
 
 import android.content.Context;
-import android.graphics.Color;
-import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -12,6 +10,8 @@ import android.widget.TextView;
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.base.ITitleBarLayout;
 import com.tencent.qcloud.tim.uikit.utils.ScreenUtil;
+
+import androidx.annotation.Nullable;
 
 
 public class TitleBarLayout extends LinearLayout implements ITitleBarLayout {
@@ -51,20 +51,10 @@ public class TitleBarLayout extends LinearLayout implements ITitleBarLayout {
         mCenterTitle = findViewById(R.id.page_title);
         mLeftIcon = findViewById(R.id.page_title_left_icon);
         mRightIcon = findViewById(R.id.page_title_right_icon);
-        LinearLayout.LayoutParams  params = (LinearLayout.LayoutParams) mTitleLayout.getLayoutParams();
-        params.height = ScreenUtil.getPxByDp(45);
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mTitleLayout.getLayoutParams();
+        params.height = ScreenUtil.getPxByDp(50);
         mTitleLayout.setLayoutParams(params);
-        setBackgroundColor(getResources().getColor(R.color.main_bg_color));
-    }
-
-    @Override
-    public void setLeftIcon(int resId) {
-        mLeftIcon.setImageResource(resId);
-    }
-
-    @Override
-    public void setRightIcon(int resId) {
-        mRightIcon.setImageResource(resId);
+        setBackgroundColor(getResources().getColor(R.color.status_bar_color));
     }
 
     @Override
@@ -108,18 +98,28 @@ public class TitleBarLayout extends LinearLayout implements ITitleBarLayout {
     }
 
     @Override
+    public void setLeftIcon(int resId) {
+        mLeftIcon.setImageResource(resId);
+    }
+
+    @Override
     public ImageView getRightIcon() {
         return mRightIcon;
     }
 
     @Override
+    public void setRightIcon(int resId) {
+        mRightIcon.setImageResource(resId);
+    }
+
+    @Override
     public TextView getLeftTitle() {
-        return mCenterTitle;
+        return mLeftTitle;
     }
 
     @Override
     public TextView getMiddleTitle() {
-        return null;
+        return mCenterTitle;
     }
 
     @Override

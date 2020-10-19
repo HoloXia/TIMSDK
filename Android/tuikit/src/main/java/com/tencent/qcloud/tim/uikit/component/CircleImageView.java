@@ -11,9 +11,10 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.support.annotation.DrawableRes;
 import android.util.AttributeSet;
 import android.widget.ImageView;
+
+import androidx.annotation.DrawableRes;
 
 /**
  * 圆形图片控件
@@ -21,11 +22,11 @@ import android.widget.ImageView;
 public class CircleImageView extends ImageView {
 
 
+    private static final Bitmap.Config BITMAP_CONFIG = Bitmap.Config.ARGB_8888;
+    private static final int COLORDRAWABLE_DIMENSION = 2;
     private Bitmap mBitmap;
     private BitmapShader mBitmapShader;
     private Paint mPaint;
-    private static final Bitmap.Config BITMAP_CONFIG = Bitmap.Config.ARGB_8888;
-    private static final int COLORDRAWABLE_DIMENSION = 2;
 
     public CircleImageView(Context context, AttributeSet attrs) {
         super(context, attrs);

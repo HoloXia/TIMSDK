@@ -1,9 +1,13 @@
 const globalModules = {
   state: {
-    isSdkReady: false
+    isSdkReady: false,
+    isCalling: false,
+    systemInfo: null
   },
   getters: {
-    isSdkReady: state => state.isSdkReady
+    isSdkReady: state => state.isSdkReady,
+    isCalling: state => state.isCalling,
+    isIphoneX: state => state.systemInfo && state.systemInfo.model.indexOf('iPhone X') > -1
   },
   mutations: {
     showToast (state, payload) {
@@ -15,10 +19,16 @@ const globalModules = {
     },
     setSdkReady (state, payload) {
       state.isSdkReady = payload
+    },
+    setCalling (state, payload) {
+      state.isCalling = payload
+    },
+    setSystemInfo (state, payload) {
+      state.systemInfo = payload
     }
   },
-  action: {
-    kickedReset (context) {
+  actions: {
+    resetStore (context) {
       context.commit('resetGroup')
       context.commit('resetUser')
       context.commit('resetCurrentConversation')

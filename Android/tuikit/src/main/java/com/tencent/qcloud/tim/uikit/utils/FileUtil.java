@@ -10,7 +10,13 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
-import android.support.v4.content.FileProvider;
+import android.provider.OpenableColumns;
+import androidx.annotation.NonNull;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import android.text.TextUtils;
+import android.util.Log;
 
 import com.tencent.qcloud.tim.uikit.TUIKit;
 
@@ -20,6 +26,7 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -31,6 +38,12 @@ import java.util.Locale;
 
 public class FileUtil {
 
+    public static final String DOCUMENTS_DIR = "documents";
+
+    public static final int SIZETYPE_B = 1;//获取文件大小单位为B的double值
+    public static final int SIZETYPE_KB = 2;//获取文件大小单位为KB的double值
+    public static final int SIZETYPE_MB = 3;//获取文件大小单位为MB的double值
+    public static final int SIZETYPE_GB = 4;//获取文件大小单位为GB的double值
 
     public static void initPath() {
 
@@ -101,20 +114,21 @@ public class FileUtil {
     }
 
     public static String getPathFromUri(Uri uri) {
+        String path = "";
         try {
             int sdkVersion = Build.VERSION.SDK_INT;
             if (sdkVersion >= 19) {
-                //
-                // return getRealPathFromUri_AboveApi19(uri);
-                return getPath(TUIKit.getAppContext(), uri);
+                path = getPath(TUIKit.getAppContext(), uri);
             } else {
-                return getRealFilePath(uri);
+                path = getRealFilePath(uri);
             }
-            //return new File(new URI(uri.toString())).getAbsolutePath();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "";
+        if (path == null) {
+            path = "";
+        }
+        return path;
     }
 
     public static String getRealFilePath(Uri uri) {
@@ -145,7 +159,7 @@ public class FileUtil {
     public static Uri getUriFromPath(String path) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                return FileProvider.getUriForFile(TUIKit.getAppContext(), TUIKit.getAppContext().getApplicationInfo().packageName + ".uikit.fileprovider", new File(path));
+                return TUIKitFileProvider.getUriForFile(TUIKit.getAppContext(), TUIKit.getAppContext().getApplicationInfo().packageName + ".uikit.fileprovider", new File(path));
             } else {
                 return Uri.fromFile(new File(path));
             }
@@ -167,7 +181,6 @@ public class FileUtil {
         }
         return false;
     }
-
 
     /**
      * 专为Android4.4以上设计的从Uri获取文件路径
@@ -199,10 +212,27 @@ public class FileUtil {
                     final String path = id.replaceFirst("raw:", "");
                     return path;
                 }
-                Uri contentUri = ContentUris.withAppendedId(
-                        Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+                String[] contentUriPrefixesToTry = new String[]{
+                        "content://downloads/public_downloads",
+                        "content://downloads/my_downloads",
+                        "content://downloads/all_downloads"
+                };
 
-                return getDataColumn(context, contentUri, null, null);
+                for (String contentUriPrefix : contentUriPrefixesToTry) {
+                    Uri contentUri = ContentUris.withAppendedId(Uri.parse(contentUriPrefix), Long.valueOf(id));
+                    try {
+                        String path = getDataColumn(context, contentUri, null, null);
+                        if (path != null) {
+                            return path;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // 在某些android8+的手机上，无法获取路径，所以用拷贝的方式，获取新文件名，然后把文件发出去
+                String destinationPath = getPathByCopyFile(context, uri);
+                return destinationPath;
             }
             // MediaProvider
             else if (isMediaDocument(uri)) {
@@ -223,12 +253,21 @@ public class FileUtil {
                 final String selection = "_id=?";
                 final String[] selectionArgs = new String[]{split[1]};
 
-                return getDataColumn(context, contentUri, selection, selectionArgs);
+                String path = getDataColumn(context, contentUri, selection, selectionArgs);
+                if (TextUtils.isEmpty(path)) {
+                    path = getPathByCopyFile(context, uri);
+                }
+                return path;
             }
         }
         // MediaStore (and general)
         else if ("content".equalsIgnoreCase(uri.getScheme())) {
-            return getDataColumn(context, uri, null, null);
+            String path = getDataColumn(context, uri, null, null);
+            if (TextUtils.isEmpty(path)) {
+                // 在某些华为android9+的手机上，无法获取路径，所以用拷贝的方式，获取新文件名，然后把文件发出去
+                path = getPathByCopyFile(context, uri);
+            }
+            return path;
         }
         // File
         else if ("file".equalsIgnoreCase(uri.getScheme())) {
@@ -236,6 +275,118 @@ public class FileUtil {
         }
 
         return null;
+    }
+
+    private static String getPathByCopyFile(Context context, Uri uri) {
+        String fileName = getFileName(context, uri);
+        File cacheDir = getDocumentCacheDir(context);
+        File file = generateFileName(fileName, cacheDir);
+        String destinationPath = null;
+        if (file != null) {
+            destinationPath = file.getAbsolutePath();
+            saveFileFromUri(context, uri, destinationPath);
+        }
+
+        return destinationPath;
+    }
+
+    @Nullable
+    private static File generateFileName(@Nullable String name, File directory) {
+        if (name == null) {
+            return null;
+        }
+
+        File file = new File(directory, name);
+
+        if (file.exists()) {
+            String fileName = name;
+            String extension = "";
+            int dotIndex = name.lastIndexOf('.');
+            if (dotIndex > 0) {
+                fileName = name.substring(0, dotIndex);
+                extension = name.substring(dotIndex);
+            }
+
+            int index = 0;
+
+            while (file.exists()) {
+                index++;
+                name = fileName + '(' + index + ')' + extension;
+                file = new File(directory, name);
+            }
+        }
+
+        try {
+            if (!file.createNewFile()) {
+                return null;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+
+        return file;
+    }
+
+    private static String getFileName(@NonNull Context context, Uri uri) {
+        String mimeType = context.getContentResolver().getType(uri);
+        String filename = null;
+
+        if (mimeType == null && context != null) {
+            filename = getName(uri.toString());
+        } else {
+            Cursor returnCursor = context.getContentResolver().query(uri, null,
+                    null, null, null);
+            if (returnCursor != null) {
+                int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                returnCursor.moveToFirst();
+                filename = returnCursor.getString(nameIndex);
+                returnCursor.close();
+            }
+        }
+
+        return filename;
+    }
+
+    private static String getName(String filename) {
+        if (filename == null) {
+            return null;
+        }
+        int index = filename.lastIndexOf('/');
+        return filename.substring(index + 1);
+    }
+
+    private static File getDocumentCacheDir(@NonNull Context context) {
+        File dir = new File(context.getCacheDir(), DOCUMENTS_DIR);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        return dir;
+    }
+
+    private static void saveFileFromUri(Context context, Uri uri, String destinationPath) {
+        InputStream is = null;
+        BufferedOutputStream bos = null;
+        try {
+            is = context.getContentResolver().openInputStream(uri);
+            bos = new BufferedOutputStream(new FileOutputStream(destinationPath, false));
+            byte[] buf = new byte[1024];
+            is.read(buf);
+            do {
+                bos.write(buf);
+            } while (is.read(buf) != -1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (is != null) is.close();
+                if (bos != null) bos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -262,6 +413,8 @@ public class FileUtil {
                 final int column_index = cursor.getColumnIndexOrThrow(column);
                 return cursor.getString(column_index);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -293,12 +446,6 @@ public class FileUtil {
     public static boolean isMediaDocument(Uri uri) {
         return "com.android.providers.media.documents".equals(uri.getAuthority());
     }
-
-
-    public static final int SIZETYPE_B = 1;//获取文件大小单位为B的double值
-    public static final int SIZETYPE_KB = 2;//获取文件大小单位为KB的double值
-    public static final int SIZETYPE_MB = 3;//获取文件大小单位为MB的double值
-    public static final int SIZETYPE_GB = 4;//获取文件大小单位为GB的double值
 
     /**
      * 获取文件指定文件的指定单位的大小

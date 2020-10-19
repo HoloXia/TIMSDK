@@ -1,15 +1,15 @@
 package com.tencent.qcloud.tim.uikit.modules.message;
 
-import com.tencent.imsdk.ext.message.TIMMessageLocator;
-import com.tencent.imsdk.ext.message.TIMMessageRevokedListener;
+import com.tencent.imsdk.v2.V2TIMAdvancedMsgListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class MessageRevokedManager implements TIMMessageRevokedListener {
+public class MessageRevokedManager extends V2TIMAdvancedMsgListener {
 
     private static final MessageRevokedManager instance = new MessageRevokedManager();
+    private List<MessageRevokeHandler> mHandlers = new ArrayList<>();
 
     private MessageRevokedManager() {
     }
@@ -18,12 +18,10 @@ public class MessageRevokedManager implements TIMMessageRevokedListener {
         return instance;
     }
 
-    private List<MessageRevokeHandler> mHandlers = new ArrayList<>();
-
     @Override
-    public void onMessageRevoked(TIMMessageLocator locator) {
+    public void onRecvMessageRevoked(String msgID) {
         for (int i = 0; i < mHandlers.size(); i++) {
-            mHandlers.get(i).handleInvoke(locator);
+            mHandlers.get(i).handleInvoke(msgID);
         }
     }
 
@@ -38,6 +36,6 @@ public class MessageRevokedManager implements TIMMessageRevokedListener {
     }
 
     public interface MessageRevokeHandler {
-        void handleInvoke(TIMMessageLocator locator);
+        void handleInvoke(String msgID);
     }
 }

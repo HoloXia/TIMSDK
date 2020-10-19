@@ -24,67 +24,11 @@ import java.util.concurrent.ExecutionException;
 public class GlideEngine implements ImageEngine {
 
 
-    @Override
-    public void loadThumbnail(Context context, int resize, Drawable placeholder, ImageView imageView, Uri uri) {
-        Glide.with(context)
-                .asBitmap() // some .jpeg files are actually gif
-                .load(uri)
-                .apply(new RequestOptions()
-                        .override(resize, resize)
-                        .placeholder(placeholder)
-                        .centerCrop())
-                .into(imageView);
-    }
-
-    @Override
-    public void loadGifThumbnail(Context context, int resize, Drawable placeholder, ImageView imageView,
-                                 Uri uri) {
-        Glide.with(context)
-                .asBitmap() // some .jpeg files are actually gif
-                .load(uri)
-                .apply(new RequestOptions()
-                        .override(resize, resize)
-                        .placeholder(placeholder)
-                        .centerCrop())
-                .into(imageView);
-    }
-
-    @Override
-    public void loadImage(Context context, int resizeX, int resizeY, ImageView imageView, Uri uri) {
-        Glide.with(context)
-                .load(uri)
-                .apply(new RequestOptions()
-                        .override(resizeX, resizeY)
-                        .priority(Priority.HIGH)
-                        .fitCenter())
-                .into(imageView);
-    }
-
-
-    @Override
-    public void loadGifImage(Context context, int resizeX, int resizeY, ImageView imageView, Uri uri) {
-        Glide.with(context)
-                .asGif()
-                .load(uri)
-                .apply(new RequestOptions()
-                        .override(resizeX, resizeY)
-                        .priority(Priority.HIGH)
-                        .fitCenter())
-                .into(imageView);
-    }
-
-
-    @Override
-    public boolean supportAnimatedGif() {
-        return true;
-    }
-
     public static void loadCornerImage(ImageView imageView, String filePath, RequestListener listener, float radius) {
         CornerTransform transform = new CornerTransform(TUIKit.getAppContext(), radius);
-        ColorDrawable drawable = new ColorDrawable(Color.GRAY);
         RequestOptions options = new RequestOptions()
                 .centerCrop()
-                .placeholder(drawable)
+                .placeholder(R.drawable.default_head)
                 .transform(transform);
         Glide.with(TUIKit.getAppContext())
                 .load(filePath)
@@ -134,15 +78,78 @@ public class GlideEngine implements ImageEngine {
         }
     }
 
-    public static Bitmap loadBitmap(String imageUrl, int targetImageSize) throws InterruptedException, ExecutionException {
-        if (TextUtils.isEmpty(imageUrl)) {
+    public static void loadImage(ImageView imageView, Object uri) {
+        if (uri == null) {
+            return;
+        }
+        Glide.with(TUIKit.getAppContext())
+                .load(uri)
+                .apply(new RequestOptions().error(R.drawable.default_head))
+                .into(imageView);
+    }
+
+    public static Bitmap loadBitmap(Object imageUrl, int targetImageSize) throws InterruptedException, ExecutionException {
+        if (imageUrl == null) {
             return null;
         }
         return Glide.with(TUIKit.getAppContext()).asBitmap()
                 .load(imageUrl)
-                .apply(new RequestOptions().error(R.drawable.default_user_icon))
+                .apply(new RequestOptions().error(R.drawable.default_head))
                 .into(targetImageSize, targetImageSize)
                 .get();
+    }
+
+    @Override
+    public void loadThumbnail(Context context, int resize, Drawable placeholder, ImageView imageView, Uri uri) {
+        Glide.with(context)
+                .asBitmap() // some .jpeg files are actually gif
+                .load(uri)
+                .apply(new RequestOptions()
+                        .override(resize, resize)
+                        .placeholder(placeholder)
+                        .centerCrop())
+                .into(imageView);
+    }
+
+    @Override
+    public void loadGifThumbnail(Context context, int resize, Drawable placeholder, ImageView imageView,
+                                 Uri uri) {
+        Glide.with(context)
+                .asBitmap() // some .jpeg files are actually gif
+                .load(uri)
+                .apply(new RequestOptions()
+                        .override(resize, resize)
+                        .placeholder(placeholder)
+                        .centerCrop())
+                .into(imageView);
+    }
+
+    @Override
+    public void loadImage(Context context, int resizeX, int resizeY, ImageView imageView, Uri uri) {
+        Glide.with(context)
+                .load(uri)
+                .apply(new RequestOptions()
+                        .override(resizeX, resizeY)
+                        .priority(Priority.HIGH)
+                        .fitCenter())
+                .into(imageView);
+    }
+
+    @Override
+    public void loadGifImage(Context context, int resizeX, int resizeY, ImageView imageView, Uri uri) {
+        Glide.with(context)
+                .asGif()
+                .load(uri)
+                .apply(new RequestOptions()
+                        .override(resizeX, resizeY)
+                        .priority(Priority.HIGH)
+                        .fitCenter())
+                .into(imageView);
+    }
+
+    @Override
+    public boolean supportAnimatedGif() {
+        return true;
     }
 
 }

@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,8 +23,27 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+
 
 public class FaceFragment extends BaseInputFragment implements View.OnClickListener {
+
+    ViewPager faceViewPager;
+    EmojiIndicatorView faceIndicator;
+    FaceGroupIcon faceFirstSetTv;
+    FaceGroupIcon mCurrentSelected;
+    LinearLayout faceGroup;
+    ArrayList<View> ViewPagerItems = new ArrayList<>();
+    ArrayList<Emoji> emojiList;
+    ArrayList<Emoji> recentlyEmojiList;
+    ArrayList<FaceGroup> customFaces;
+    private int mCurrentGroupIndex = 0;
+    private int columns = 7;
+    private int rows = 3;
+    private int vMargin = 0;
+    private OnEmojiClickListener listener;
+    private RecentEmojiManager recentManager;
 
     public static FaceFragment Instance() {
         FaceFragment instance = new FaceFragment();
@@ -34,23 +51,6 @@ public class FaceFragment extends BaseInputFragment implements View.OnClickListe
         instance.setArguments(bundle);
         return instance;
     }
-
-    ViewPager faceViewPager;
-    EmojiIndicatorView faceIndicator;
-    FaceGroupIcon faceFirstSetTv;
-    FaceGroupIcon mCurrentSelected;
-    LinearLayout faceGroup;
-    private int mCurrentGroupIndex = 0;
-
-    ArrayList<View> ViewPagerItems = new ArrayList<>();
-    ArrayList<Emoji> emojiList;
-    ArrayList<Emoji> recentlyEmojiList;
-    ArrayList<FaceGroup> customFaces;
-    private int columns = 7;
-    private int rows = 3;
-    private int vMargin = 0;
-    private OnEmojiClickListener listener;
-    private RecentEmojiManager recentManager;
 
     public void setListener(OnEmojiClickListener listener) {
         this.listener = listener;
@@ -67,8 +67,8 @@ public class FaceFragment extends BaseInputFragment implements View.OnClickListe
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        emojiList = FaceManager.getEmojiList();
         try {
+            emojiList = FaceManager.getEmojiList();
             if (recentManager.getCollection(RecentEmojiManager.PREFERENCE_NAME) != null) {
                 recentlyEmojiList = (ArrayList<Emoji>) recentManager.getCollection(RecentEmojiManager.PREFERENCE_NAME);
             } else {
@@ -293,6 +293,14 @@ public class FaceFragment extends BaseInputFragment implements View.OnClickListe
     }
 
 
+    public interface OnEmojiClickListener {
+        void onEmojiDelete();
+
+        void onEmojiClick(Emoji emoji);
+
+        void onCustomFaceClick(int groupIndex, Emoji emoji);
+    }
+
     class FaceGVAdapter extends BaseAdapter {
         private List<Emoji> list;
         private Context mContext;
@@ -394,13 +402,5 @@ public class FaceFragment extends BaseInputFragment implements View.OnClickListe
         public boolean isViewFromObject(View arg0, Object arg1) {
             return (arg0 == arg1);
         }
-    }
-
-    public interface OnEmojiClickListener {
-        void onEmojiDelete();
-
-        void onEmojiClick(Emoji emoji);
-
-        void onCustomFaceClick(int groupIndex, Emoji emoji);
     }
 }

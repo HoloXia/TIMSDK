@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
-import android.support.v7.view.ContextThemeWrapper;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -19,6 +18,8 @@ import android.widget.TextView;
 
 import com.tencent.qcloud.tim.uikit.R;
 
+import androidx.appcompat.view.ContextThemeWrapper;
+
 
 public class PopWindowUtil {
 
@@ -27,7 +28,7 @@ public class PopWindowUtil {
             if (activity.isDestroyed())
                 return null;
         }
-        AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(activity, R.style.Theme_Transparent));
+        AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(activity, R.style.TUIKit_Theme_Transparent));
         builder.setTitle("");
         builder.setCancelable(true);
         AlertDialog dialog = builder.create();

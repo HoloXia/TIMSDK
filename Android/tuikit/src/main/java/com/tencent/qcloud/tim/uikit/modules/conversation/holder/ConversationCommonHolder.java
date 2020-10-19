@@ -12,19 +12,19 @@ import com.tencent.qcloud.tim.uikit.modules.conversation.base.ConversationIconVi
 import com.tencent.qcloud.tim.uikit.modules.conversation.base.ConversationInfo;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfo;
 import com.tencent.qcloud.tim.uikit.utils.DateTimeUtil;
+import com.tencent.qcloud.tim.uikit.utils.TUIKitConstants;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 public class ConversationCommonHolder extends ConversationBaseHolder {
 
+    public ConversationIconView conversationIconView;
     protected LinearLayout leftItemLayout;
     protected TextView titleText;
     protected TextView messageText;
     protected TextView timelineText;
     protected TextView unreadText;
-    public ConversationIconView conversationIconView;
+    protected TextView atInfoText;
 
     public ConversationCommonHolder(View itemView) {
         super(itemView);
@@ -34,15 +34,19 @@ public class ConversationCommonHolder extends ConversationBaseHolder {
         messageText = rootView.findViewById(R.id.conversation_last_msg);
         timelineText = rootView.findViewById(R.id.conversation_time);
         unreadText = rootView.findViewById(R.id.conversation_unread);
+        atInfoText = rootView.findViewById(R.id.conversation_at_msg);
     }
 
     public void layoutViews(ConversationInfo conversation, int position) {
         MessageInfo lastMsg = conversation.getLastMessage();
-        if (lastMsg.getStatus() == MessageInfo.MSG_STATUS_REVOKE ) {
+        if (lastMsg != null && lastMsg.getStatus() == MessageInfo.MSG_STATUS_REVOKE) {
             if (lastMsg.isSelf()) {
                 lastMsg.setExtra("您撤回了一条消息");
             } else if (lastMsg.isGroup()) {
-                String message = "\"<font color=\"#338BFF\">" + lastMsg.getFromUser() + "</font>\"";
+                String message = TUIKitConstants.covert2HTMLString(
+                        TextUtils.isEmpty(lastMsg.getGroupNameCard())
+                                ? lastMsg.getFromUser()
+                                : lastMsg.getGroupNameCard());
                 lastMsg.setExtra(message + "撤回了一条消息");
             } else {
                 lastMsg.setExtra("对方撤回了一条消息");
@@ -50,23 +54,9 @@ public class ConversationCommonHolder extends ConversationBaseHolder {
         }
 
         if (conversation.isTop()) {
-            leftItemLayout.setBackgroundColor(rootView.getResources().getColor(R.color.top_conversation_color));
+            leftItemLayout.setBackgroundColor(rootView.getResources().getColor(R.color.conversation_top_color));
         } else {
             leftItemLayout.setBackgroundColor(Color.WHITE);
-        }
-        conversationIconView.setIconUrls(null); // 如果自己要设置url，这行代码需要删除
-        if (conversation.isGroup()) {
-            if (mAdapter.mIsShowItemRoundIcon) {
-                conversationIconView.setBitmapResId(R.drawable.conversation_group);
-            } else {
-                conversationIconView.setDefaultImageResId(R.drawable.conversation_group);
-            }
-        } else {
-            if (mAdapter.mIsShowItemRoundIcon) {
-                conversationIconView.setBitmapResId(R.drawable.conversation_c2c);
-            } else {
-                conversationIconView.setDefaultImageResId(R.drawable.conversation_c2c);
-            }
         }
 
         titleText.setText(conversation.getTitle());
@@ -77,35 +67,44 @@ public class ConversationCommonHolder extends ConversationBaseHolder {
                 messageText.setText(Html.fromHtml(lastMsg.getExtra().toString()));
                 messageText.setTextColor(rootView.getResources().getColor(R.color.list_bottom_text_bg));
             }
-            timelineText.setText(DateTimeUtil.getTimeFormatText(new Date(lastMsg.getMsgTime())));
+            timelineText.setText(DateTimeUtil.getTimeFormatText(new Date(lastMsg.getMsgTime() * 1000)));
         }
-
 
         if (conversation.getUnRead() > 0) {
             unreadText.setVisibility(View.VISIBLE);
-            unreadText.setText("" + conversation.getUnRead());
+            if (conversation.getUnRead() > 99) {
+                unreadText.setText("99+");
+            } else {
+                unreadText.setText("" + conversation.getUnRead());
+            }
         } else {
             unreadText.setVisibility(View.GONE);
         }
 
-        if (mAdapter.mDateTextSize != 0) {
-            timelineText.setTextSize(mAdapter.mDateTextSize);
+        if (conversation.getAtInfoText().isEmpty()){
+            atInfoText.setVisibility(View.GONE);
+        } else {
+            atInfoText.setVisibility(View.VISIBLE);
+            atInfoText.setText(conversation.getAtInfoText());
+            atInfoText.setTextColor(Color.RED);
         }
-        if (mAdapter.mBottomTextSize != 0) {
-            messageText.setTextSize(mAdapter.mBottomTextSize);
-        }
-        if (mAdapter.mTopTextSize != 0) {
-            titleText.setTextSize(mAdapter.mTopTextSize);
-        }
-//        if (mIsShowUnreadDot) {
-//            holder.unreadText.setVisibility(View.GONE);
-//        }
 
-        if (!TextUtils.isEmpty(conversation.getIconUrl())) {
-            List<String> urllist = new ArrayList<>();
-            urllist.add(conversation.getIconUrl());
-            conversationIconView.setIconUrls(urllist);
-            urllist.clear();
+        conversationIconView.setRadius(mAdapter.getItemAvatarRadius());
+        if (mAdapter.getItemDateTextSize() != 0) {
+            timelineText.setTextSize(mAdapter.getItemDateTextSize());
+        }
+        if (mAdapter.getItemBottomTextSize() != 0) {
+            messageText.setTextSize(mAdapter.getItemBottomTextSize());
+        }
+        if (mAdapter.getItemTopTextSize() != 0) {
+            titleText.setTextSize(mAdapter.getItemTopTextSize());
+        }
+        if (!mAdapter.hasItemUnreadDot()) {
+            unreadText.setVisibility(View.GONE);
+        }
+
+        if (conversation.getIconUrlList() != null) {
+            conversationIconView.setConversation(conversation);
         }
 
         //// 由子类设置指定消息类型的views

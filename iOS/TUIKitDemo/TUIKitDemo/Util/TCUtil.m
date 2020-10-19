@@ -13,7 +13,7 @@
 #define ENABLE_SHARE 1
 
 #import "TCUtil.h"
-#import "NSString+Common.h"
+#import "NSString+TUICommon.h"
 #import <mach/mach.h>
 #import <Accelerate/Accelerate.h>
 #import <mach/mach.h>
@@ -43,6 +43,10 @@
         NSLog(@"[%@] Post Json is not valid", [self class]);
     }
     return nil;
+}
+
++ (NSString *)dictionary2JsonStr:(NSDictionary *)dict {
+    return [[NSString alloc] initWithData:[self dictionary2JsonData:dict] encoding:NSUTF8StringEncoding];;
 }
 
 + (NSDictionary *)jsonSring2Dictionary:(NSString *)jsonString
@@ -286,4 +290,7 @@
 }
 
 
++ (void)report:(NSString *)action actionSub:(NSString *)actionSub code:(NSNumber *)code  msg:(NSString *)msg {
+    // to do
+}
 @end

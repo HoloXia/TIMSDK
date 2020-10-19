@@ -1,16 +1,16 @@
 PODS:
-  - TXIMSDK_Mac (4.5.15)
+  - TXIMSDK_Mac (5.0.6)
 
 DEPENDENCIES:
   - TXIMSDK_Mac
 
 SPEC REPOS:
-  https://github.com/cocoapods/specs.git:
+  https://github.com/CocoaPods/Specs.git:
     - TXIMSDK_Mac
 
 SPEC CHECKSUMS:
-  TXIMSDK_Mac: fa7218573ac78513fbfbfbfb6d38d96292ade7e0
+  TXIMSDK_Mac: a2947c8c4d4d705b7df4d5463c0e6fa6eaf1e446
 
-PODFILE CHECKSUM: 0c88f6ca862b7c2352a7f12a7cd8e2e22db41b5a
+PODFILE CHECKSUM: 562802054bc7b78e7fa5ab4c969480672fae3aba
 
-COCOAPODS: 1.7.5
+COCOAPODS: 1.9.3

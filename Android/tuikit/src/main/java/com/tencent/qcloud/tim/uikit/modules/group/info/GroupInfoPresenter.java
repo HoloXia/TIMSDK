@@ -2,9 +2,9 @@ package com.tencent.qcloud.tim.uikit.modules.group.info;
 
 import android.app.Activity;
 
-import com.tencent.qcloud.tim.uikit.utils.TUIKitLog;
 import com.tencent.qcloud.tim.uikit.base.IUIKitCallBack;
 import com.tencent.qcloud.tim.uikit.utils.TUIKitConstants;
+import com.tencent.qcloud.tim.uikit.utils.TUIKitLog;
 import com.tencent.qcloud.tim.uikit.utils.ToastUtil;
 
 
@@ -68,9 +68,7 @@ public class GroupInfoPresenter {
     public String getNickName() {
         String nickName = "";
         if (mProvider.getSelfGroupInfo() != null) {
-            if (mProvider.getSelfGroupInfo().getDetail() != null) {
-                nickName = mProvider.getSelfGroupInfo().getDetail().getNameCard();
-            }
+            nickName = mProvider.getSelfGroupInfo().getNameCard();
         }
         return nickName == null ? "" : nickName;
     }

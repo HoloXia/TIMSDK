@@ -1,10 +1,9 @@
 package com.tencent.qcloud.tim.uikit.modules.chat.interfaces;
 
-import android.support.v7.widget.RecyclerView;
-
 import com.tencent.qcloud.tim.uikit.component.action.PopMenuAction;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.MessageLayout;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.MessageListAdapter;
+import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.holder.IGroupMessageClickListener;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.holder.IOnCustomMessageDrawListener;
 
 import java.util.List;
@@ -23,18 +22,18 @@ public interface IMessageLayout extends IMessageProperties {
     void setAdapter(MessageListAdapter adapter);
 
     /**
-     * 设置消息列表的事件监听器 {@link MessageLayout.OnItemClickListener}
-     *
-     * @param listener
-     */
-    void setOnItemClickListener(MessageLayout.OnItemClickListener listener);
-
-    /**
      * 获得消息列表的点击事件
      *
      * @return
      */
     MessageLayout.OnItemClickListener getOnItemClickListener();
+
+    /**
+     * 设置消息列表的事件监听器 {@link MessageLayout.OnItemClickListener}
+     *
+     * @param listener
+     */
+    void setOnItemClickListener(MessageLayout.OnItemClickListener listener);
 
     /**
      * 获取 PopMenu 的 Action 列表
@@ -56,4 +55,10 @@ public interface IMessageLayout extends IMessageProperties {
      * @param listener {@link IOnCustomMessageDrawListener}
      */
     void setOnCustomMessageDrawListener(IOnCustomMessageDrawListener listener);
+
+    /**
+     * 设置群直播消息点击事件回调
+     * @param listener {@link IGroupMessageClickListener}
+     */
+    void setIGroupMessageClickListener(IGroupMessageClickListener listener);
 }

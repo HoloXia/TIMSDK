@@ -10,13 +10,6 @@ import com.tencent.qcloud.tim.uikit.modules.conversation.ConversationListLayout;
 public interface IConversationListLayout {
 
     /**
-     * 设置会话Adapter
-     *
-     * @param adapter
-     */
-    void setAdapter(IConversationAdapter adapter);
-
-    /**
      * 设置会话界面背景，非ListView区域
      *
      * @param resId
@@ -45,11 +38,11 @@ public interface IConversationListLayout {
     void disableItemUnreadDot(boolean flag);
 
     /**
-     * 会话Item头像圆角化
+     * 设置会话Item头像圆角
      *
-     * @param flag
+     * @param radius
      */
-    void enableItemRoundIcon(boolean flag);
+    void setItemAvatarRadius(int radius);
 
     /**
      * 设置会话Item顶部字体大小
@@ -85,5 +78,12 @@ public interface IConversationListLayout {
      * @return
      */
     ConversationListAdapter getAdapter();
+
+    /**
+     * 设置会话Adapter
+     *
+     * @param adapter
+     */
+    void setAdapter(IConversationAdapter adapter);
 
 }

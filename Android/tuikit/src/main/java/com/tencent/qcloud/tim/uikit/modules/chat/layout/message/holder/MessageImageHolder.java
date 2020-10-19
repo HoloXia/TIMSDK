@@ -12,15 +12,12 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.tencent.imsdk.TIMCallBack;
-import com.tencent.imsdk.TIMFaceElem;
-import com.tencent.imsdk.TIMImage;
-import com.tencent.imsdk.TIMImageElem;
-import com.tencent.imsdk.TIMImageType;
-import com.tencent.imsdk.TIMMessage;
-import com.tencent.imsdk.TIMSnapshot;
-import com.tencent.imsdk.TIMVideo;
-import com.tencent.imsdk.TIMVideoElem;
+import com.tencent.imsdk.v2.V2TIMDownloadCallback;
+import com.tencent.imsdk.v2.V2TIMElem;
+import com.tencent.imsdk.v2.V2TIMFaceElem;
+import com.tencent.imsdk.v2.V2TIMImageElem;
+import com.tencent.imsdk.v2.V2TIMMessage;
+import com.tencent.imsdk.v2.V2TIMVideoElem;
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.TUIKit;
 import com.tencent.qcloud.tim.uikit.component.face.FaceManager;
@@ -40,8 +37,8 @@ import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 
 public class MessageImageHolder extends MessageContentHolder {
 
-    private static final int DEFAULT_MAX_SIZE = 360;
-    private static final int DEFAULT_RADIUS = 5;
+    private static final int DEFAULT_MAX_SIZE = 540;
+    private static final int DEFAULT_RADIUS = 10;
     private final List<String> downloadEles = new ArrayList<>();
     private ImageView contentImage;
     private ImageView videoPlayBtn;
@@ -66,7 +63,7 @@ public class MessageImageHolder extends MessageContentHolder {
 
     @Override
     public void layoutVariableViews(MessageInfo msg, int position) {
-        msgContentLinear.setBackground(null);
+        msgContentFrame.setBackground(null);
         switch (msg.getMsgType()) {
             case MessageInfo.MSG_TYPE_CUSTOM_FACE:
             case MessageInfo.MSG_TYPE_CUSTOM_FACE + 1:
@@ -89,31 +86,32 @@ public class MessageImageHolder extends MessageContentHolder {
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.addRule(RelativeLayout.CENTER_IN_PARENT);
         contentImage.setLayoutParams(params);
-        TIMMessage timMsg = msg.getTIMMessage();
-        if (timMsg.getElementCount() > 0) {
-            TIMFaceElem faceEle = (TIMFaceElem) timMsg.getElement(0);
-            String filter = new String(faceEle.getData());
-            if (!filter.contains("@2x")) {
-                filter += "@2x";
-            }
-            Bitmap bitmap = FaceManager.getCustomBitmap(faceEle.getIndex(), filter);
+        V2TIMMessage message = msg.getTimMessage();
+        if (message.getElemType() != V2TIMMessage.V2TIM_ELEM_TYPE_FACE) {
+            return;
+        }
+        V2TIMFaceElem faceEle = message.getFaceElem();
+        String filter = new String(faceEle.getData());
+        if (!filter.contains("@2x")) {
+            filter += "@2x";
+        }
+        Bitmap bitmap = FaceManager.getCustomBitmap(faceEle.getIndex(), filter);
+        if (bitmap == null) {
+            // 自定义表情没有找到，用emoji再试一次
+            bitmap = FaceManager.getEmoji(new String(faceEle.getData()));
             if (bitmap == null) {
-                // 自定义表情没有找到，用emoji再试一次
-                bitmap = FaceManager.getEmoji(new String(faceEle.getData()));
-                if (bitmap == null) {
-                    // TODO 临时找的一个图片用来表明自定义表情加载失败
-                    contentImage.setImageDrawable(rootView.getContext().getResources().getDrawable(R.drawable.face_delete));
-                } else {
-                    contentImage.setImageBitmap(bitmap);
-                }
+                // TODO 临时找的一个图片用来表明自定义表情加载失败
+                contentImage.setImageDrawable(rootView.getContext().getResources().getDrawable(R.drawable.face_delete));
             } else {
                 contentImage.setImageBitmap(bitmap);
             }
+        } else {
+            contentImage.setImageBitmap(bitmap);
         }
     }
 
     private ViewGroup.LayoutParams getImageParams(ViewGroup.LayoutParams params, final MessageInfo msg) {
-        if (msg.getImgWidth() == 0 || msg.getImgHeight() == 0 ) {
+        if (msg.getImgWidth() == 0 || msg.getImgHeight() == 0) {
             return params;
         }
         if (msg.getImgWidth() > msg.getImgHeight()) {
@@ -135,32 +133,41 @@ public class MessageImageHolder extends MessageContentHolder {
         resetParentLayout();
         videoPlayBtn.setVisibility(View.GONE);
         videoDurationText.setVisibility(View.GONE);
-        TIMMessage timMsg = msg.getTIMMessage();
-        final TIMImageElem imageEle = (TIMImageElem) timMsg.getElement(0);
-        final List<TIMImage> imgs = imageEle.getImageList();
+        V2TIMMessage timMessage = msg.getTimMessage();
+        if (timMessage.getElemType() != V2TIMMessage.V2TIM_ELEM_TYPE_IMAGE) {
+            return;
+        }
+        final V2TIMImageElem imageEle = timMessage.getImageElem();
+        final List<V2TIMImageElem.V2TIMImage> imgs = imageEle.getImageList();
         if (!TextUtils.isEmpty(msg.getDataPath())) {
             GlideEngine.loadCornerImage(contentImage, msg.getDataPath(), null, DEFAULT_RADIUS);
         } else {
             for (int i = 0; i < imgs.size(); i++) {
-                final TIMImage img = imgs.get(i);
-                if (img.getType() == TIMImageType.Thumb) {
+                final V2TIMImageElem.V2TIMImage img = imgs.get(i);
+                if (img.getType() == V2TIMImageElem.V2TIM_IMAGE_TYPE_THUMB) {
                     synchronized (downloadEles) {
-                        if (downloadEles.contains(img.getUuid())) {
+                        if (downloadEles.contains(img.getUUID())) {
                             break;
                         }
-                        downloadEles.add(img.getUuid());
+                        downloadEles.add(img.getUUID());
                     }
-                    final String path = TUIKitConstants.IMAGE_DOWNLOAD_DIR + img.getUuid();
-                    img.getImage(path, new TIMCallBack() {
+                    final String path = TUIKitConstants.IMAGE_DOWNLOAD_DIR + img.getUUID();
+                    img.downloadImage(path, new V2TIMDownloadCallback() {
+                        @Override
+                        public void onProgress(V2TIMElem.V2ProgressInfo progressInfo) {
+                            TUIKitLog.i("downloadImage progress current:",
+                                    progressInfo.getCurrentSize() + ", total:" + progressInfo.getTotalSize());
+                        }
+
                         @Override
                         public void onError(int code, String desc) {
-                            downloadEles.remove(img.getUuid());
+                            downloadEles.remove(img.getUUID());
                             TUIKitLog.e("MessageListAdapter img getImage", code + ":" + desc);
                         }
 
                         @Override
                         public void onSuccess() {
-                            downloadEles.remove(img.getUuid());
+                            downloadEles.remove(img.getUUID());
                             msg.setDataPath(path);
                             GlideEngine.loadCornerImage(contentImage, msg.getDataPath(), null, DEFAULT_RADIUS);
                         }
@@ -173,8 +180,8 @@ public class MessageImageHolder extends MessageContentHolder {
             @Override
             public void onClick(View v) {
                 for (int i = 0; i < imgs.size(); i++) {
-                    TIMImage img = imgs.get(i);
-                    if (img.getType() == TIMImageType.Original) {
+                    V2TIMImageElem.V2TIMImage img = imgs.get(i);
+                    if (img.getType() == V2TIMImageElem.V2TIM_IMAGE_TYPE_ORIGIN) {
                         PhotoViewActivity.mCurrentOriginalImage = img;
                         break;
                     }
@@ -203,44 +210,50 @@ public class MessageImageHolder extends MessageContentHolder {
 
         videoPlayBtn.setVisibility(View.VISIBLE);
         videoDurationText.setVisibility(View.VISIBLE);
-        TIMMessage timMsg = msg.getTIMMessage();
-        final TIMVideoElem videoEle = (TIMVideoElem) timMsg.getElement(0);
-        final TIMVideo video = videoEle.getVideoInfo();
+        V2TIMMessage timMessage = msg.getTimMessage();
+        if (timMessage.getElemType() != V2TIMMessage.V2TIM_ELEM_TYPE_VIDEO) {
+            return;
+        }
+        final V2TIMVideoElem videoEle = timMessage.getVideoElem();
 
         if (!TextUtils.isEmpty(msg.getDataPath())) {
             GlideEngine.loadCornerImage(contentImage, msg.getDataPath(), null, DEFAULT_RADIUS);
         } else {
-            final TIMSnapshot shotInfo = videoEle.getSnapshotInfo();
             synchronized (downloadEles) {
-                if (!downloadEles.contains(shotInfo.getUuid())) {
-                    downloadEles.add(shotInfo.getUuid());
+                if (!downloadEles.contains(videoEle.getSnapshotUUID())) {
+                    downloadEles.add(videoEle.getSnapshotUUID());
                 }
             }
 
-            final String path = TUIKitConstants.IMAGE_DOWNLOAD_DIR + videoEle.getSnapshotInfo().getUuid();
-            videoEle.getSnapshotInfo().getImage(path, new TIMCallBack() {
+            final String path = TUIKitConstants.IMAGE_DOWNLOAD_DIR + videoEle.getSnapshotUUID();
+            videoEle.downloadSnapshot(path, new V2TIMDownloadCallback() {
+                @Override
+                public void onProgress(V2TIMElem.V2ProgressInfo progressInfo) {
+                    TUIKitLog.i("downloadSnapshot progress current:", progressInfo.getCurrentSize() + ", total:" + progressInfo.getTotalSize());
+                }
+
                 @Override
                 public void onError(int code, String desc) {
-                    downloadEles.remove(shotInfo.getUuid());
+                    downloadEles.remove(videoEle.getSnapshotUUID());
                     TUIKitLog.e("MessageListAdapter video getImage", code + ":" + desc);
                 }
 
                 @Override
                 public void onSuccess() {
-                    downloadEles.remove(shotInfo.getUuid());
+                    downloadEles.remove(videoEle.getSnapshotUUID());
                     msg.setDataPath(path);
                     GlideEngine.loadCornerImage(contentImage, msg.getDataPath(), null, DEFAULT_RADIUS);
                 }
             });
         }
 
-        String durations = "00:" + video.getDuaration();
-        if (video.getDuaration() < 10) {
-            durations = "00:0" + video.getDuaration();
+        String durations = "00:" + videoEle.getDuration();
+        if (videoEle.getDuration() < 10) {
+            durations = "00:0" + videoEle.getDuration();
         }
         videoDurationText.setText(durations);
 
-        final String videoPath = TUIKitConstants.VIDEO_DOWNLOAD_DIR + video.getUuid();
+        final String videoPath = TUIKitConstants.VIDEO_DOWNLOAD_DIR + videoEle.getVideoUUID();
         final File videoFile = new File(videoPath);
         //以下代码为zanhanding修改，用于fix视频消息发送失败后不显示红色感叹号的问题
         if (msg.getStatus() == MessageInfo.MSG_STATUS_SEND_SUCCESS) {
@@ -280,15 +293,20 @@ public class MessageImageHolder extends MessageContentHolder {
                         }
                     }, 200);
                 } else {
-                    getVideo(video, videoPath, msg, true, position);
+                    getVideo(videoEle, videoPath, msg, true, position);
                 }
                 //以上代码为zanhanding修改，用于fix点击发送失败视频后无法播放，并且红色感叹号消失的问题
             }
         });
     }
 
-    private void getVideo(TIMVideo video, String videoPath, final MessageInfo msg, final boolean autoPlay, final int position) {
-        video.getVideo(videoPath, new TIMCallBack() {
+    private void getVideo(V2TIMVideoElem videoElem, String videoPath, final MessageInfo msg, final boolean autoPlay, final int position) {
+        videoElem.downloadVideo(videoPath, new V2TIMDownloadCallback() {
+            @Override
+            public void onProgress(V2TIMElem.V2ProgressInfo progressInfo) {
+                TUIKitLog.i("downloadVideo progress current:", progressInfo.getCurrentSize() + ", total:" + progressInfo.getTotalSize());
+            }
+
             @Override
             public void onError(int code, String desc) {
                 ToastUtil.toastLongMessage("下载视频失败:" + code + "=" + desc);

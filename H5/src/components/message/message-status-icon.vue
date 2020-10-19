@@ -1,9 +1,9 @@
 <template>
-  <span
+  <div
     style="width:16px;height:16px;"
     :class="messageIconClass"
     @click="handleIconClick"
-  >{{messageIconClass==='message-send-fail'? '!':''}}</span>
+  >{{messageIconClass==='message-send-fail'? '!':''}}</div>
 </template>
 
 <script>
@@ -30,17 +30,23 @@ export default {
   methods: {
     handleIconClick() {
       if (this.messageIconClass === 'message-send-fail') {
-        this.tim.resendMessage(this.message)
+        this.tim.resendMessage(this.message).catch(imError => {
+          this.$store.commit('showMessage', {
+            message: imError.message,
+            type: 'error'
+          })
+        })
       }
     }
   }
 }
 </script>
 
-<style>
+<style lang="stylus" scoped>
 .message-send-fail {
-  background-color: red;
-  color: #fff;
+  margin-right: 8px;
+  background-color: #f35f5f;
+  color: $white;
   border-radius: 50%;
   text-align: center;
   line-height: 16px;

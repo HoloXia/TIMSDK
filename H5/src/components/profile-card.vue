@@ -1,11 +1,10 @@
 <template>
   <div class="profile-card-wrapper">
-    <div class="profile-header">
-      <avatar :src="profile.avatar" shape="square" text="U" />
+    <div class="content">
+      <avatar :src="profile.avatar" />
       <div class="basic">
         <span class="nick text-ellipsis">{{ profile.nick || profile.userID }}</span>
         <span class="iconfont" :class="genderClass"></span>
-        <div>ID:{{ profile.userID }}</div>
       </div>
     </div>
   </div>
@@ -35,21 +34,42 @@ export default {
 }
 </script>
 
-<style scpoed>
+<style lang="stylus" scpoed>
 .profile-header {
   display: flex;
   margin-bottom: 12px;
 }
+
+.profile-card-wrapper {
+  .content {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .avatar {
+    width: 70px;
+    height: 70px;
+  }
+}
+
 .basic {
-  margin-left: 12px;
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
 }
+
 .icon-male {
-  color: #14b1f6;
+  color: $primary;
 }
+
 .icon-female {
   color: #ff8096;
 }
+
 .nick {
+  font-size: 18px;
   margin-right: 8px;
   max-width: 100px;
   display: inline-block;

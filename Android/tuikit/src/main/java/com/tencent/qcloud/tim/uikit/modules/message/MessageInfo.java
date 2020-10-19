@@ -1,13 +1,18 @@
 package com.tencent.qcloud.tim.uikit.modules.message;
 
 import android.net.Uri;
+import android.text.TextUtils;
 
-import com.tencent.imsdk.TIMMessage;
+import com.tencent.imsdk.v2.V2TIMCallback;
+import com.tencent.imsdk.v2.V2TIMManager;
+import com.tencent.imsdk.v2.V2TIMMessage;
+import com.tencent.qcloud.tim.uikit.utils.TUIKitLog;
 
 import java.util.UUID;
 
 
 public class MessageInfo {
+    private final String TAG = "MessageInfo";
 
     public static final int MSG_TYPE_MIME = 0x1;
 
@@ -54,7 +59,7 @@ public class MessageInfo {
      */
     public static final int MSG_TYPE_GROUP_CREATE = 0x101;
     /**
-     * 群创建提示消息
+     * 群解散提示消息
      */
     public static final int MSG_TYPE_GROUP_DELETE = 0x102;
     /**
@@ -77,6 +82,10 @@ public class MessageInfo {
      * 群通知更新提示消息
      */
     public static final int MSG_TYPE_GROUP_MODIFY_NOTICE = 0x107;
+    /**
+     * 群音视频呼叫提示消息
+     */
+    public static final int MSG_TYPE_GROUP_AV_CALL_NOTICE = 0x108;
 
     /**
      * 消息未读状态
@@ -120,7 +129,9 @@ public class MessageInfo {
     public static final int MSG_STATUS_DOWNLOADED = 6;
 
     private String id = UUID.randomUUID().toString();
+    private long uniqueId = 0;
     private String fromUser;
+    private String groupNameCard;
     private int msgType;
     private int status = MSG_STATUS_NORMAL;
     private boolean self;
@@ -130,10 +141,11 @@ public class MessageInfo {
     private String dataPath;
     private Object extra;
     private long msgTime;
-    private int imgWithd;
+    private int imgWidth;
     private int imgHeight;
+    private boolean peerRead;
 
-    private TIMMessage TIMMessage;
+    private V2TIMMessage timMessage;
 
     /**
      * 获取消息唯一标识
@@ -153,8 +165,16 @@ public class MessageInfo {
         this.id = id;
     }
 
+    public long getUniqueId() {
+        return uniqueId;
+    }
+
+    public void setUniqueId(long uniqueId) {
+        this.uniqueId = uniqueId;
+    }
+
     /**
-     * 获取消息发送方
+     * 获取消息发送方 ID
      *
      * @return
      */
@@ -163,12 +183,30 @@ public class MessageInfo {
     }
 
     /**
-     * 设置消息发送方
+     * 设置消息发送方 ID
      *
      * @param fromUser
      */
     public void setFromUser(String fromUser) {
         this.fromUser = fromUser;
+    }
+
+    /**
+     * 获取群名片
+     *
+     * @return
+     */
+    public String getGroupNameCard() {
+        return groupNameCard;
+    }
+
+    /**
+     * 设置群名片
+     *
+     * @param groupNameCard
+     */
+    public void setGroupNameCard(String groupNameCard) {
+        this.groupNameCard = groupNameCard;
     }
 
     /**
@@ -178,6 +216,15 @@ public class MessageInfo {
      */
     public int getMsgType() {
         return msgType;
+    }
+
+    /**
+     * 设置消息类型
+     *
+     * @param msgType
+     */
+    public void setMsgType(int msgType) {
+        this.msgType = msgType;
     }
 
     /**
@@ -196,15 +243,6 @@ public class MessageInfo {
      */
     public void setStatus(int status) {
         this.status = status;
-    }
-
-    /**
-     * 设置消息类型
-     *
-     * @param msgType
-     */
-    public void setMsgType(int msgType) {
-        this.msgType = msgType;
     }
 
     /**
@@ -297,22 +335,60 @@ public class MessageInfo {
         this.dataPath = dataPath;
     }
 
+    public int getCustomInt() {
+        if (timMessage == null) {
+            return 0;
+        }
+        return timMessage.getLocalCustomInt();
+    }
+
+    public void setCustomInt(int value) {
+        if (timMessage == null) {
+            return;
+        }
+        timMessage.setLocalCustomInt(value);
+    }
+
+    public boolean checkEquals(String msgID) {
+        if (TextUtils.isEmpty(msgID)) {
+            return false;
+        }
+        return timMessage.getMsgID().equals(msgID);
+    }
+
+    public boolean remove() {
+        if (timMessage == null) {
+            return false;
+        }
+        V2TIMManager.getMessageManager().deleteMessageFromLocalStorage(timMessage, new V2TIMCallback() {
+            @Override
+            public void onError(int code, String desc) {
+                TUIKitLog.e(TAG, "deleteMessageFromLocalStorage error code = " + code + ", desc = " + desc);
+            }
+
+            @Override
+            public void onSuccess() {
+            }
+        });
+        return true;
+    }
+
     /**
      * 获取SDK的消息bean
      *
      * @return
      */
-    public TIMMessage getTIMMessage() {
-        return TIMMessage;
+    public V2TIMMessage getTimMessage() {
+        return timMessage;
     }
 
     /**
      * 设置SDK的消息bean
      *
-     * @param TIMMessage
+     * @param timMessage
      */
-    public void setTIMMessage(TIMMessage TIMMessage) {
-        this.TIMMessage = TIMMessage;
+    public void setTimMessage(V2TIMMessage timMessage) {
+        this.timMessage = timMessage;
     }
 
     /**
@@ -339,7 +415,7 @@ public class MessageInfo {
      * @return
      */
     public int getImgWidth() {
-        return imgWithd;
+        return imgWidth;
     }
 
     /**
@@ -348,7 +424,7 @@ public class MessageInfo {
      * @param imgWidth
      */
     public void setImgWidth(int imgWidth) {
-        this.imgWithd = imgWidth;
+        this.imgWidth = imgWidth;
     }
 
     /**
@@ -370,7 +446,7 @@ public class MessageInfo {
     }
 
     /**
-     * 获取消息发送时间
+     * 获取消息发送时间，单位是秒
      *
      * @return
      */
@@ -379,7 +455,7 @@ public class MessageInfo {
     }
 
     /**
-     * 设置消息发送时间
+     * 设置消息发送时间，单位是秒
      *
      * @param msgTime
      */
@@ -387,4 +463,11 @@ public class MessageInfo {
         this.msgTime = msgTime;
     }
 
+    public boolean isPeerRead() {
+        return peerRead;
+    }
+
+    public void setPeerRead(boolean peerRead) {
+        this.peerRead = peerRead;
+    }
 }

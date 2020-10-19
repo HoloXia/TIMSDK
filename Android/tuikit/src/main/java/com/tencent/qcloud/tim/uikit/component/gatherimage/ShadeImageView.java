@@ -10,7 +10,9 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import android.util.AttributeSet;
 import android.util.SparseArray;
 import android.widget.ImageView;
@@ -21,11 +23,9 @@ import com.tencent.qcloud.tim.uikit.utils.ScreenUtil;
 @SuppressLint("AppCompatCustomView")
 public class ShadeImageView extends ImageView {
 
+    private static SparseArray<Bitmap> sRoundBitmapArray = new SparseArray();
     private Paint mShadePaint = new Paint();
     private Bitmap mRoundBitmap;
-    private static SparseArray<Bitmap> sRoundBitmapArray = new SparseArray();
-
-
     private int radius = ScreenUtil.getPxByDp(5);
 
     public ShadeImageView(Context context) {

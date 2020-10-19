@@ -19,9 +19,8 @@ import java.util.List;
  */
 public class ConversationIconView extends RelativeLayout {
 
-    private ImageView mIconView;
-
     private static final int icon_size = ScreenUtil.getPxByDp(50);
+    private ImageView mIconView;
 
 
     public ConversationIconView(Context context) {
@@ -49,7 +48,7 @@ public class ConversationIconView extends RelativeLayout {
     private void init() {
         inflate(getContext(), R.layout.profile_icon_view, this);
         mIconView = findViewById(R.id.profile_icon);
-        ((SynthesizedImageView) mIconView).defaultImage(R.drawable.default_user_icon);
+        ((SynthesizedImageView) mIconView).defaultImage(0);
     }
 
     public void setProfileImageView(ImageView iconView) {
@@ -65,12 +64,24 @@ public class ConversationIconView extends RelativeLayout {
      *
      * @param iconUrls 头像url,最多只取前9个
      */
-    public void setIconUrls(List<String> iconUrls) {
+    public void setIconUrls(List<Object> iconUrls) {
         if (mIconView instanceof SynthesizedImageView) {
             ((SynthesizedImageView) (mIconView)).displayImage(iconUrls).load();
         }
     }
 
+    public void setConversation(ConversationInfo c) {
+        if (mIconView instanceof SynthesizedImageView) {
+            ((SynthesizedImageView) (mIconView)).setImageId(c.getConversationId());
+            setIconUrls(c.getIconUrlList());
+        }
+    }
+
+    public void setRadius(int radius) {
+        if (mIconView instanceof SynthesizedImageView) {
+            ((SynthesizedImageView) (mIconView)).setRadius(radius);
+        }
+    }
 
     public void setDefaultImageResId(int resId) {
         BitmapDrawable bd = (BitmapDrawable) getContext().getResources().getDrawable(resId);

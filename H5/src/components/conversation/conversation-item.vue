@@ -1,63 +1,63 @@
 <template>
-  <popover
-    placement="top"
-    style="display: flex;flex-direction: column;padding:0 12px"
-    v-model="popoverVisible"
-    trigger="manual"
-  >
-    <el-button class="context-menu-button" type="text" @click="deleteConversation">删除</el-button>
-    <el-button class="context-menu-button" type="text" @click="popoverVisible = false ">取消</el-button>
     <div
-      slot="reference"
-      class="conversation-item-container"
-      @contextmenu.prevent="popoverVisible = true"
-      @click="selectConversation"
+        class="conversation-item-container"
+        :class="{ 'choose': conversation.conversationID === currentConversation.conversationID }"
+        @click="selectConversation"
     >
-      <el-row :gutter="30">
-        <el-col :span="4">
-          <avatar shape="square" :src="avatar" :text="conversation.type" />
-        </el-col>
-        <el-col :span="20">
-          <div class="conversation-item">
-            <div class="item-header">
-              <div
-                class="covnersation-info text-ellipsis"
-                v-if="conversation.type ===  TIM.TYPES.CONV_C2C"
-              >{{conversation.userProfile.nick || conversation.userProfile.userID}}</div>
-              <div
-                class="covnersation-info text-ellipsis"
-                v-else-if="conversation.type ===  TIM.TYPES.CONV_GROUP"
-              >{{conversation.groupProfile.name || conversation.groupProfile.groupID}}</div>
-              <div class="covnersation-info text-ellipsis" v-else-if="conversation.type === TIM.TYPES.CONV_SYSTEM">系统通知</div>
-              <badge
-                v-if="showUnreadCount"
-                :max="99"
-                :type="showGrayBadge?'info':'danger'"
-                :value="conversation.unreadCount"
-              />
+      <div class="close-btn">
+        <span class="tim-icon-close" title="删除会话" @click="deleteConversation"></span>
+      </div>
+      <div class="warp">
+        <avatar :src="avatar" :type="conversation.type" />
+        <div class="content">
+          <div class="row-1">
+            <div class="name">
+              <div class="text-ellipsis">
+                <span :title="conversation.userProfile.nick || conversation.userProfile.userID"
+                  v-if="conversation.type ===  TIM.TYPES.CONV_C2C"
+                  >{{conversation.userProfile.nick || conversation.userProfile.userID}}
+                </span>
+                <span :title="conversation.groupProfile.name || conversation.groupProfile.groupID"
+                  v-else-if="conversation.type ===  TIM.TYPES.CONV_GROUP"
+                  >{{conversation.groupProfile.name || conversation.groupProfile.groupID}}
+                </span>
+                <span
+                  v-else-if="conversation.type === TIM.TYPES.CONV_SYSTEM"
+                  >系统通知
+                </span>
+              </div>
             </div>
-            <div class="conversation-message" v-if="conversation.lastMessage">
-              <span class="message-for-show">
-                <span style="color:red;" v-if="hasMessageAtMe">[有人提到我]</span>
-                {{conversation.lastMessage.messageForShow}}
+            <div class="unread-count">
+              <span class="badge" v-if="showUnreadCount">
+                {{conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}}
               </span>
-              <span class="message-time">{{date}}</span>
             </div>
           </div>
-        </el-col>
-      </el-row>
+          <div class="row-2">
+            <div class="summary">
+              <div v-if="conversation.lastMessage" class="text-ellipsis">
+                <span class="remind" style="color:red;" v-if="hasMessageAtMe">[有人提到我]</span>
+                <span class="text" :title="conversation.lastMessage.messageForShow">
+                  {{messageForShow}}
+                </span>
+              </div>
+            </div>
+            <div class="date">
+              {{date}}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </popover>
+
 </template>
 
 <script>
-import { Button, Badge, Popover } from 'element-ui'
 import { mapGetters, mapState } from 'vuex'
 import { isToday, getDate, getTime } from '../../utils/date'
 export default {
   name: 'conversation-item',
   props: ['conversation'],
-  components: { Badge, Popover, ElButton: Button },
   data() {
     return {
       popoverVisible: false,
@@ -66,13 +66,16 @@ export default {
   },
   computed: {
     showUnreadCount() {
+      if (this.$store.getters.hidden) {
+        return this.conversation.unreadCount > 0
+      }
       // 是否显示未读计数。当前会话和未读计数为0的会话，不显示。
       return (
         this.currentConversation.conversationID !==
           this.conversation.conversationID && this.conversation.unreadCount > 0
       )
     },
-    date: function() {
+    date() {
       if (
         !this.conversation.lastMessage ||
         !this.conversation.lastMessage.lastTime
@@ -95,6 +98,18 @@ export default {
           return ''
       }
     },
+    conversationName: function() {
+      if (this.conversation.type === this.TIM.TYPES.CONV_C2C) {
+        return this.conversation.userProfile.nick || this.conversation.userProfile.userID
+      }
+      if (this.conversation.type === this.TIM.TYPES.CONV_GROUP) {
+        return this.conversation.groupProfile.name || this.conversation.groupProfile.groupID
+      }
+      if (this.conversation.type === this.TIM.TYPES.CONV_SYSTEM) {
+        return '系统通知'
+      }
+      return ''
+    },
     showGrayBadge() {
       if (this.conversation.type !== this.TIM.TYPES.CONV_GROUP) {
         return false
@@ -104,8 +119,21 @@ export default {
         'AcceptNotNotify'
       )
     },
+    messageForShow() {
+      if (this.conversation.lastMessage.isRevoked) {
+        if (this.conversation.lastMessage.fromAccount === this.currentUserProfile.userID) {
+          return '你撤回了一条消息'
+        }
+        if (this.conversation.type === this.TIM.TYPES.CONV_C2C) {
+          return '对方撤回了一条消息'
+        }
+        return `${this.conversation.lastMessage.fromAccount}撤回了一条消息`
+      }
+      return this.conversation.lastMessage.messageForShow
+    },
     ...mapState({
-      currentConversation: state => state.conversation.currentConversation
+      currentConversation: state => state.conversation.currentConversation,
+      currentUserProfile: state => state.user.currentUserProfile
     }),
     ...mapGetters(['toAccount'])
   },
@@ -122,48 +150,37 @@ export default {
   },
   methods: {
     selectConversation() {
-      this.$store.dispatch(
-        'checkoutConversation',
-        this.conversation.conversationID
-      )
+      if (this.conversation.conversationID !== this.currentConversation.conversationID) {
+        this.$store.dispatch(
+          'checkoutConversation',
+          this.conversation.conversationID
+        )
+      }
     },
-    deleteConversation() {
+    deleteConversation(event) {
+      // 停止冒泡，避免和点击会话的事件冲突
+      event.stopPropagation()
       this.tim
         .deleteConversation(this.conversation.conversationID)
         .then(() => {
-          this.$message({
-            message: `会话${this.conversation.conversationID}删除成功!`,
+          this.$store.commit('showMessage', {
+            message: `会话【${this.conversationName}】删除成功!`,
             type: 'success'
           })
           this.popoverVisible = false
           this.$store.commit('resetCurrentConversation')
         })
         .catch(error => {
-          this.$message.error(
-            `会话${this.conversation.conversationID}删除失败!, error=${error.message}`
-          )
+          this.$store.commit('showMessage', {
+            message: `会话【${this.conversationName}】删除失败!, error=${error.message}`,
+            type: 'error'
+          })
           this.popoverVisible = false
         })
     },
     showContextMenu() {
       this.popoverVisible = true
     },
-    setMessageRead() {
-      if (this.conversation.unreadCount === 0) {
-        return
-      }
-      if (this.conversation.type === 'C2C') {
-        this.tim.setMessageRead({
-          conversationID: this.conversation.conversationID,
-          lastMessageTime: this.conversation.lastMessage.lastTime
-        })
-      } else if (this.conversation.type === 'GROUP') {
-        this.tim.setMessageRead({
-          conversationID: this.conversation.conversationID,
-          lastMessageSeq: this.conversation.lastMessage.lastSequence
-        })
-      }
-    }
   },
   watch: {
     currentConversation(next) {
@@ -175,47 +192,88 @@ export default {
 }
 </script>
 
-<style scoped>
-.conversation-item-container {
-  margin: 6px 0;
-}
-.item-header {
-  display: flex;
-  justify-content: space-between;
-}
-.covnersation-info{
-  max-width: 100%;
-}
+<style lang="stylus" scoped>
 
-.conversation-message {
-  display: flex;
-  justify-content: space-between;
-}
-.message-for-show {
-  color: gray;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-basis: 100px;
-  flex-grow: 1;
-}
 
-.unread-count {
-  background: #ff4949;
-  color: #fff;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  text-align: center;
-  box-shadow: 0 0.08533rem 0.17067rem 0 rgba(255, 73, 7);
+.conversation-item-container
+  padding 15px 20px
+  cursor pointer
+  position relative
+  overflow hidden
+  transition .2s
+  // &:first-child
+  //   padding-top 30px
+  &:hover
+    background-color $background
+    .close-btn
+      right 3px
+  .close-btn
+    position absolute
+    right -20px
+    top 3px
+    color $font-dark
+    transition: all .2s ease;
+    &:hover
+      color $danger
+  .warp
+    display flex
+  .avatar
+    width 40px
+    height 40px
+    margin-right 10px
+    border-radius 50%
+    flex-shrink 0
+  .content
+    flex 1
+    height 40px
+    overflow hidden
+    .row-1
+      display flex
+      line-height 21px
+      .name
+        color $font-light
+        flex 1
+        min-width 0px
+      .unread-count
+        padding-left 10px
+        flex-shrink 0
+        color $font-dark
+        font-size 12px
+        .badge
+          vertical-align bottom
+          background-color $danger
+          border-radius 10px
+          color #FFF
+          display inline-block
+          font-size 12px
+          height 18px
+          max-width 40px
+          line-height 18px
+          padding 0 6px
+          text-align center
+          white-space nowrap
+    .row-2
+      display flex
+      font-size 12px
+      padding-top 3px
+      .summary
+        flex 1
+        overflow hidden
+        min-width 0px
+        color: $secondary
+        .remind
+          color $danger
+      .date
+        padding-left 10px
+        flex-shrink 0
+        text-align right
+        color $font-dark
+.choose {
+  background-color: $background;
 }
 .context-menu-button {
-  width: 100%;
-  margin-left: 0 !important;
-}
-.message-time {
-  color: gray;
-  font-size: 1.4rem;
-  white-space: nowrap;
+  padding: 10px
+  border: 2px solid $primary;
+  border-radius: 8px;
 }
 </style>

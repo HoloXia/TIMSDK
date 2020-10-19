@@ -28,11 +28,11 @@ import java.util.regex.Pattern;
 
 public class FaceManager {
 
+    private static final int drawableWidth = ScreenUtil.getPxByDp(32);
     private static ArrayList<Emoji> emojiList = new ArrayList<>();
     private static LruCache<String, Bitmap> drawableCache = new LruCache(1024);
     private static Context context = TUIKit.getAppContext();
     private static String[] emojiFilters = context.getResources().getStringArray(R.array.emoji_filter);
-    private static final int drawableWidth = ScreenUtil.getPxByDp(32);
     private static ArrayList<FaceGroup> customFace = new ArrayList<>();
 
     public static ArrayList<Emoji> getEmojiList() {
@@ -184,18 +184,24 @@ public class FaceManager {
     }
 
 
-    public static void handlerEmojiText(TextView comment, String content) {
+    public static void handlerEmojiText(TextView comment, String content, boolean typing) {
         SpannableStringBuilder sb = new SpannableStringBuilder(content);
         String regex = "\\[(\\S+?)\\]";
         Pattern p = Pattern.compile(regex);
         Matcher m = p.matcher(content);
+        boolean imageFound = false;
         while (m.find()) {
             String emojiName = m.group();
             Bitmap bitmap = drawableCache.get(emojiName);
             if (bitmap != null) {
+                imageFound = true;
                 sb.setSpan(new ImageSpan(context, bitmap),
                         m.start(), m.end(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
             }
+        }
+        // 如果没有发现表情图片，并且当前是输入状态，不再重设输入框
+        if (!imageFound && typing) {
+            return;
         }
         int selection = comment.getSelectionStart();
         comment.setText(sb);

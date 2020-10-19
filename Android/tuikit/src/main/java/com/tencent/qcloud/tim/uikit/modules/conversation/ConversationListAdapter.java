@@ -1,35 +1,40 @@
 package com.tencent.qcloud.tim.uikit.modules.conversation;
 
-import android.support.annotation.NonNull;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.TUIKit;
-import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.holder.MessageContentHolder;
-import com.tencent.qcloud.tim.uikit.modules.conversation.interfaces.IConversationAdapter;
-import com.tencent.qcloud.tim.uikit.modules.conversation.interfaces.IConversationProvider;
 import com.tencent.qcloud.tim.uikit.modules.conversation.base.ConversationInfo;
 import com.tencent.qcloud.tim.uikit.modules.conversation.holder.ConversationBaseHolder;
 import com.tencent.qcloud.tim.uikit.modules.conversation.holder.ConversationCommonHolder;
 import com.tencent.qcloud.tim.uikit.modules.conversation.holder.ConversationCustomHolder;
+import com.tencent.qcloud.tim.uikit.modules.conversation.interfaces.IConversationAdapter;
+import com.tencent.qcloud.tim.uikit.modules.conversation.interfaces.IConversationProvider;
+import com.tencent.qcloud.tim.uikit.utils.ScreenUtil;
 
 import java.util.ArrayList;
-
 import java.util.List;
 
 public class ConversationListAdapter extends IConversationAdapter {
 
+    private boolean mHasShowUnreadDot = true;
+    private int mItemAvatarRadius = ScreenUtil.getPxByDp(5);
+    private int mTopTextSize;
+    private int mBottomTextSize;
+    private int mDateTextSize;
     private List<ConversationInfo> mDataSource = new ArrayList<>();
     private ConversationListLayout.OnItemClickListener mOnItemClickListener;
     private ConversationListLayout.OnItemLongClickListener mOnItemLongClickListener;
-    public boolean mIsShowUnreadDot = true;
-    public boolean mIsShowItemRoundIcon = false;
-    public int mTopTextSize;
-    public int mBottomTextSize;
-    public int mDateTextSize;
+
+    public ConversationListAdapter() {
+
+    }
 
     public void setOnItemClickListener(ConversationListLayout.OnItemClickListener listener) {
         this.mOnItemClickListener = listener;
@@ -37,10 +42,6 @@ public class ConversationListAdapter extends IConversationAdapter {
 
     public void setOnItemLongClickListener(ConversationListLayout.OnItemLongClickListener listener) {
         this.mOnItemLongClickListener = listener;
-    }
-
-    public ConversationListAdapter() {
-
     }
 
     public void setDataProvider(IConversationProvider provider) {
@@ -107,7 +108,7 @@ public class ConversationListAdapter extends IConversationAdapter {
     @Override
     public void onViewRecycled(@NonNull RecyclerView.ViewHolder holder) {
         if (holder instanceof ConversationCommonHolder) {
-            ((ConversationCommonHolder)holder).conversationIconView.setBackground(null);
+            ((ConversationCommonHolder) holder).conversationIconView.setBackground(null);
         }
     }
 
@@ -143,25 +144,52 @@ public class ConversationListAdapter extends IConversationAdapter {
         notifyDataSetChanged();
     }
 
+    public void notifyDataSourceChanged(String info) {
+        for (int i = 0; i < mDataSource.size(); i++) {
+            if (TextUtils.equals(info, mDataSource.get(i).getConversationId())) {
+                notifyItemChanged(i);
+                return;
+            }
+        }
+    }
+
     public void setItemTopTextSize(int size) {
         mTopTextSize = size;
+    }
+
+    public int getItemTopTextSize() {
+        return mTopTextSize;
     }
 
     public void setItemBottomTextSize(int size) {
         mBottomTextSize = size;
     }
 
+    public int getItemBottomTextSize() {
+        return mBottomTextSize;
+    }
+
     public void setItemDateTextSize(int size) {
         mDateTextSize = size;
     }
 
-    public void enableItemRoundIcon(boolean flag) {
-        mIsShowItemRoundIcon = flag;
+    public int getItemDateTextSize() {
+        return mDateTextSize;
+    }
+
+    public void setItemAvatarRadius(int radius) {
+        mItemAvatarRadius = radius;
+    }
+
+    public int getItemAvatarRadius() {
+        return mItemAvatarRadius;
     }
 
     public void disableItemUnreadDot(boolean flag) {
-        mIsShowUnreadDot = !flag;
+        mHasShowUnreadDot = !flag;
     }
 
-
+    public boolean hasItemUnreadDot() {
+        return mHasShowUnreadDot;
+    }
 }

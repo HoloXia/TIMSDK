@@ -3,8 +3,6 @@ package com.tencent.qcloud.tim.uikit.modules.chat.layout.message.holder;
 import android.view.View;
 import android.widget.TextView;
 
-import com.tencent.imsdk.TIMMessage;
-import com.tencent.imsdk.TIMTextElem;
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.component.face.FaceManager;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfo;
@@ -30,7 +28,9 @@ public class MessageTextHolder extends MessageContentHolder {
     @Override
     public void layoutVariableViews(MessageInfo msg, int position) {
         msgBodyText.setVisibility(View.VISIBLE);
-        FaceManager.handlerEmojiText(msgBodyText, msg.getExtra().toString());
+        if (msg.getExtra() != null) {
+            FaceManager.handlerEmojiText(msgBodyText, msg.getExtra().toString(), false);
+        }
         if (properties.getChatContextFontSize() != 0) {
             msgBodyText.setTextSize(properties.getChatContextFontSize());
         }

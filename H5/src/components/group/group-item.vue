@@ -1,13 +1,9 @@
 <template>
-  <div @click="handleGroupClick">
-    <el-row class="group-item-container">
-      <el-col :span="6">
-        <avatar :src="group.avatar" text="G" />
-      </el-col>
-      <el-col :span="18">
-        <div class="group-name">{{ group.name }}</div>
-      </el-col>
-    </el-row>
+  <div @click="handleGroupClick" class="scroll-container">
+    <div class="group-item">
+      <avatar :src="group.avatar" />
+      <div class="group-name text-ellipsis">{{ group.name }}</div>
+    </div>
   </div>
 </template>
 
@@ -32,15 +28,38 @@ export default {
     },
     quitGroup() {
       this.tim.quitGroup(this.group.groupID)
+      .catch(error => {
+          this.$store.commit('showMessage', {
+            type: 'error',
+            message: error.message
+          })
+        })
     }
   }
 }
 </script>
 
-<style>
-.group-item-container {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 12px;
-}
+<style lang="stylus" scoped>
+.scroll-container
+  overflow-y scroll
+  flex 1
+  .group-item
+    display flex
+    padding 10px 20px
+    cursor pointer
+    position relative
+    overflow hidden
+    transition .2s
+    &:hover
+      background-color $background
+    .avatar
+      width 30px
+      height 30px
+      border-radius 50%
+      margin-right 10px
+      flex-shrink 0
+    .group-name
+      flex 1
+      color $font-light
+      line-height 30px
 </style>

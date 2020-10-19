@@ -1,19 +1,18 @@
 package com.tencent.qcloud.tim.uikit.modules.chat.layout.message.holder;
 
 import android.text.TextUtils;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.tencent.imsdk.TIMFriendshipManager;
-import com.tencent.imsdk.TIMManager;
-import com.tencent.imsdk.TIMUserProfile;
+import com.tencent.imsdk.v2.V2TIMMessage;
 import com.tencent.qcloud.tim.uikit.R;
 import com.tencent.qcloud.tim.uikit.component.gatherimage.UserIconView;
+import com.tencent.qcloud.tim.uikit.config.TUIKitConfigs;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfo;
 
 import java.util.ArrayList;
@@ -27,6 +26,8 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
     public LinearLayout msgContentLinear;
     public ProgressBar sendingProgress;
     public ImageView statusImage;
+    public TextView isReadText;
+    public TextView unreadAudioText;
 
     public MessageContentHolder(View itemView) {
         super(itemView);
@@ -38,8 +39,11 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
         msgContentLinear = itemView.findViewById(R.id.msg_content_ll);
         statusImage = itemView.findViewById(R.id.message_status_iv);
         sendingProgress = itemView.findViewById(R.id.message_sending_pb);
+        isReadText = itemView.findViewById(R.id.is_read_tv);
+        unreadAudioText = itemView.findViewById(R.id.audio_unread);
     }
 
+    @Override
     public void layoutViews(final MessageInfo msg, final int position) {
         super.layoutViews(msg, position);
 
@@ -55,8 +59,8 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
             leftUserIcon.setDefaultImageResId(properties.getAvatar());
             rightUserIcon.setDefaultImageResId(properties.getAvatar());
         } else {
-            leftUserIcon.setDefaultImageResId(R.drawable.chat_left);
-            rightUserIcon.setDefaultImageResId(R.drawable.chat_right);
+            leftUserIcon.setDefaultImageResId(R.drawable.default_head);
+            rightUserIcon.setDefaultImageResId(R.drawable.default_head);
         }
         if (properties.getAvatarRadius() != 0) {
             leftUserIcon.setRadius(properties.getAvatarRadius());
@@ -86,11 +90,6 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
             } else {
                 usernameText.setVisibility(properties.getRightNameVisibility());
             }
-            if (usernameText.getVisibility() == View.GONE) {
-                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) msgContentLinear.getLayoutParams();
-                params.topMargin = 6;
-                msgContentLinear.setLayoutParams(params);
-            }
         } else {
             if (properties.getLeftNameVisibility() == 0) {
                 if (msg.isGroup()) { // 群聊默认显示对方的昵称
@@ -101,11 +100,6 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
             } else {
                 usernameText.setVisibility(properties.getLeftNameVisibility());
             }
-            if (usernameText.getVisibility() == View.GONE) {
-                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) msgContentLinear.getLayoutParams();
-                params.topMargin = 17;
-                msgContentLinear.setLayoutParams(params);
-            }
         }
         if (properties.getNameFontColor() != 0) {
             usernameText.setTextColor(properties.getNameFontColor());
@@ -114,52 +108,58 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
             usernameText.setTextSize(properties.getNameFontSize());
         }
         // 聊天界面设置头像和昵称
-        TIMUserProfile profile = TIMFriendshipManager.getInstance().queryUserProfile(msg.getFromUser());
-        if (profile == null) {
-            usernameText.setText(msg.getFromUser());
+        V2TIMMessage timMessage = msg.getTimMessage();
+        if (!TextUtils.isEmpty(timMessage.getNameCard())) {
+            usernameText.setText(timMessage.getNameCard());
+        } else if (!TextUtils.isEmpty(timMessage.getFriendRemark())) {
+            usernameText.setText(timMessage.getFriendRemark());
+        } else if (!TextUtils.isEmpty(timMessage.getNickName())) {
+            usernameText.setText(timMessage.getNickName());
         } else {
-            usernameText.setText(!TextUtils.isEmpty(profile.getNickName()) ? profile.getNickName() : msg.getFromUser());
-            if (!TextUtils.isEmpty(profile.getFaceUrl()) && !msg.isSelf()) {
-                List<String> urllist = new ArrayList<>();
-                urllist.add(profile.getFaceUrl());
-                leftUserIcon.setIconUrls(urllist);
-                urllist.clear();
-            }
+            usernameText.setText(timMessage.getSender());
         }
-        TIMUserProfile selfInfo = TIMFriendshipManager.getInstance().queryUserProfile(TIMManager.getInstance().getLoginUser());
-        if (selfInfo != null && msg.isSelf()) {
-            if (!TextUtils.isEmpty(selfInfo.getFaceUrl())) {
-                List<String> urllist = new ArrayList<>();
-                urllist.add(selfInfo.getFaceUrl());
+
+        if (!TextUtils.isEmpty(timMessage.getFaceUrl())) {
+            List<Object> urllist = new ArrayList<>();
+            urllist.add(timMessage.getFaceUrl());
+            if (msg.isSelf()) {
                 rightUserIcon.setIconUrls(urllist);
-                urllist.clear();
+            } else {
+                leftUserIcon.setIconUrls(urllist);
             }
         }
 
-        if (msg.getStatus() == MessageInfo.MSG_STATUS_SENDING || msg.getStatus() == MessageInfo.MSG_STATUS_DOWNLOADING) {
-            sendingProgress.setVisibility(View.VISIBLE);
+        if (msg.isSelf()) {
+            if (msg.getStatus() == MessageInfo.MSG_STATUS_SEND_FAIL
+                    || msg.getStatus() == MessageInfo.MSG_STATUS_SEND_SUCCESS
+                    || msg.isPeerRead()) {
+                sendingProgress.setVisibility(View.GONE);
+            } else {
+                sendingProgress.setVisibility(View.VISIBLE);
+            }
         } else {
             sendingProgress.setVisibility(View.GONE);
         }
 
         //// 聊天气泡设置
         if (msg.isSelf()) {
-            if (properties.getRightBubble() != null) {
-                msgContentLinear.setBackground(properties.getRightBubble());
+            if (properties.getRightBubble() != null && properties.getRightBubble().getConstantState() != null) {
+                msgContentFrame.setBackground(properties.getRightBubble().getConstantState().newDrawable());
             } else {
-                msgContentLinear.setBackgroundResource(R.drawable.chat_bubble_myself);
+                msgContentFrame.setBackgroundResource(R.drawable.chat_bubble_myself);
             }
         } else {
-            if (properties.getLeftBubble() != null) {
-                msgContentLinear.setBackground(properties.getLeftBubble());
+            if (properties.getLeftBubble() != null && properties.getLeftBubble().getConstantState() != null) {
+                msgContentFrame.setBackground(properties.getLeftBubble().getConstantState().newDrawable());
+                msgContentFrame.setLayoutParams(msgContentFrame.getLayoutParams());
             } else {
-                msgContentLinear.setBackgroundResource(R.drawable.chat_other_bg);
+                msgContentFrame.setBackgroundResource(R.drawable.chat_other_bg);
             }
         }
 
         //// 聊天气泡的点击事件处理
         if (onItemClickListener != null) {
-            msgContentLinear.setOnLongClickListener(new View.OnLongClickListener() {
+            msgContentFrame.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View v) {
                     onItemClickListener.onMessageLongClick(v, position, msg);
@@ -183,7 +183,7 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
         //// 发送状态的设置
         if (msg.getStatus() == MessageInfo.MSG_STATUS_SEND_FAIL) {
             statusImage.setVisibility(View.VISIBLE);
-            statusImage.setOnClickListener(new View.OnClickListener() {
+            msgContentFrame.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     if (onItemClickListener != null) {
@@ -192,6 +192,7 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
                 }
             });
         } else {
+            msgContentFrame.setOnClickListener(null);
             statusImage.setVisibility(View.GONE);
         }
 
@@ -203,6 +204,31 @@ public abstract class MessageContentHolder extends MessageEmptyHolder {
             msgContentLinear.removeView(msgContentFrame);
             msgContentLinear.addView(msgContentFrame, 0);
         }
+        msgContentLinear.setVisibility(View.VISIBLE);
+
+        //// 对方已读标识的设置
+        if (TUIKitConfigs.getConfigs().getGeneralConfig().isShowRead()) {
+            if (msg.isSelf()) {
+                if (msg.isGroup()) {
+                    isReadText.setVisibility(View.GONE);
+                } else {
+                    isReadText.setVisibility(View.VISIBLE);
+                    LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) isReadText.getLayoutParams();
+                    params.gravity = Gravity.CENTER_VERTICAL;
+                    isReadText.setLayoutParams(params);
+                    if (msg.isPeerRead()) {
+                        isReadText.setText(R.string.has_read);
+                    } else {
+                        isReadText.setText(R.string.unread);
+                    }
+                }
+            } else {
+                isReadText.setVisibility(View.GONE);
+            }
+        }
+
+        //// 音频已读
+        unreadAudioText.setVisibility(View.GONE);
 
         //// 由子类设置指定消息类型的views
         layoutVariableViews(msg, position);

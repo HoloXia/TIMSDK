@@ -1,18 +1,20 @@
 package com.tencent.qcloud.tim.demo.contact;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import android.view.View;
 
+import com.tencent.qcloud.tim.demo.BaseActivity;
 import com.tencent.qcloud.tim.demo.R;
 import com.tencent.qcloud.tim.uikit.component.TitleBarLayout;
 import com.tencent.qcloud.tim.uikit.modules.contact.ContactItemBean;
 import com.tencent.qcloud.tim.uikit.modules.contact.ContactListView;
 import com.tencent.qcloud.tim.uikit.utils.TUIKitConstants;
 
-public class BlackListActivity extends Activity {
+public class BlackListActivity extends BaseActivity {
 
     private TitleBarLayout mTitleBar;
     private ContactListView mListView;
@@ -37,7 +39,6 @@ public class BlackListActivity extends Activity {
         mTitleBar.getRightGroup().setVisibility(View.GONE);
 
         mListView = findViewById(R.id.black_list);
-        mListView.loadDataSource(ContactListView.DataSource.BLACK_LIST);
         mListView.setOnItemClickListener(new ContactListView.OnItemClickListener() {
             @Override
             public void onItemClick(int position, ContactItemBean contact) {

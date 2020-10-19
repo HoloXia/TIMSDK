@@ -1,7 +1,9 @@
 package com.tencent.qcloud.tim.uikit.modules.contact;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -42,7 +44,6 @@ public class ContactLayout extends LinearLayout implements IContactLayout {
         mTitleBar.getRightIcon().setImageResource(R.drawable.conversation_more);
 
         mContactListView = findViewById(R.id.contact_listview);
-        mContactListView.loadDataSource(ContactListView.DataSource.CONTACT_LIST);
     }
 
     public void initDefault() {

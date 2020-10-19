@@ -1,11 +1,15 @@
 package com.tencent.qcloud.tim.uikit.modules.conversation.base;
 
 import android.graphics.Bitmap;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
+import com.tencent.imsdk.conversation.Conversation;
+import com.tencent.imsdk.v2.V2TIMConversation;
 import com.tencent.qcloud.tim.uikit.modules.message.MessageInfo;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConversationInfo implements Serializable, Comparable<ConversationInfo> {
 
@@ -31,7 +35,16 @@ public class ConversationInfo implements Serializable, Comparable<ConversationIn
     /**
      * 会话头像url
      */
-    private String iconUrl;
+    private List<Object> iconUrlList = new ArrayList<>();
+
+    public List<Object> getIconUrlList() {
+        return iconUrlList;
+    }
+
+    public void setIconUrlList(List<Object> iconUrlList) {
+        this.iconUrlList = iconUrlList;
+    }
+
     /**
      * 会话标题
      */
@@ -58,6 +71,11 @@ public class ConversationInfo implements Serializable, Comparable<ConversationIn
      */
     private MessageInfo lastMessage;
 
+    /**
+     * 会话界面显示的@提示消息
+     */
+    private String atInfoText;
+
     public ConversationInfo() {
 
     }
@@ -78,14 +96,6 @@ public class ConversationInfo implements Serializable, Comparable<ConversationIn
         this.id = id;
     }
 
-    public String getIconUrl() {
-        return iconUrl;
-    }
-
-    public void setIconUrl(String iconUrl) {
-        this.iconUrl = iconUrl;
-    }
-
     public String getTitle() {
         return title;
     }
@@ -100,14 +110,6 @@ public class ConversationInfo implements Serializable, Comparable<ConversationIn
 
     public void setUnRead(int unRead) {
         this.unRead = unRead;
-    }
-
-    public Bitmap getIcon() {
-        return icon;
-    }
-
-    public void setIcon(Bitmap icon) {
-        this.icon = icon;
     }
 
     public boolean isGroup() {
@@ -126,10 +128,17 @@ public class ConversationInfo implements Serializable, Comparable<ConversationIn
         this.top = top;
     }
 
+    /**
+     * 获得最后一条消息的时间，单位是秒
+     */
     public long getLastMessageTime() {
         return lastMessageTime;
     }
 
+    /**
+     * 设置最后一条消息的时间，单位是秒
+     * @param lastMessageTime
+     */
     public void setLastMessageTime(long lastMessageTime) {
         this.lastMessageTime = lastMessageTime;
     }
@@ -150,6 +159,14 @@ public class ConversationInfo implements Serializable, Comparable<ConversationIn
         this.lastMessage = lastMessage;
     }
 
+    public void setAtInfoText(String atInfoText) {
+        this.atInfoText = atInfoText;
+    }
+
+    public String getAtInfoText() {
+        return atInfoText;
+    }
+
     @Override
     public int compareTo(@NonNull ConversationInfo other) {
         return this.lastMessageTime > other.lastMessageTime ? -1 : 1;
@@ -162,7 +179,7 @@ public class ConversationInfo implements Serializable, Comparable<ConversationIn
                 ", unRead=" + unRead +
                 ", conversationId='" + conversationId + '\'' +
                 ", id='" + id + '\'' +
-                ", iconUrl='" + iconUrl + '\'' +
+                ", iconUrl='" + iconUrlList.size() + '\'' +
                 ", title='" + title + '\'' +
                 ", icon=" + icon +
                 ", isGroup=" + isGroup +

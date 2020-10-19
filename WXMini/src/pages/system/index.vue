@@ -1,14 +1,10 @@
 <template>
   <div class="container">
-    <i-modal title="处理申请" :visible="applyModalVisible" @ok="handleApply" @cancel="modal">
-      <div class="input-wrapper">
-        <i-radio-group :current="action" @change="handleChange">
-          <i-radio value="Agree">同意</i-radio>
-          <i-radio value="Reject">不同意</i-radio>
-        </i-radio-group>
-        <input type="text" class="input" placeholder="输入回复" v-model.lazy:value="text"/>
+    <div v-if="currentMessageList.length === 0">
+      <div class="card">
+        暂无系统消息
       </div>
-    </i-modal>
+    </div>
     <div v-for="message in currentMessageList" :key="message.ID">
       <div v-if="message.payload.operationType === 1" class="card handle">
         <div>
@@ -16,7 +12,7 @@
           {{message.virtualDom[0].text}}
         </div>
         <div class="choose">
-          <button type="button" class="button" @click="handleApplyModal(message)">处理</button>
+          <button type="button" class="button" @click="handleClick(message)">处理</button>
         </div>
       </div>
       <div class="card" v-else>
@@ -30,14 +26,6 @@
 <script>
 import { mapState } from 'vuex'
 export default {
-  data () {
-    return {
-      action: 'Agree',
-      message: {},
-      text: '',
-      applyModalVisible: false
-    }
-  },
   onUnload () {
     this.$store.commit('resetCurrentConversation')
     this.$store.commit('resetGroup')
@@ -49,29 +37,41 @@ export default {
       }
     })
   },
-  methods: {
-    handleChange (e) {
-      this.action = e.target.value
-    },
-    handleApplyModal (message) {
-      this.message = message
-      this.modal()
-    },
-    modal () {
-      this.applyModalVisible = !this.applyModalVisible
-    },
-    handleApply () {
-      wx.$app.handleGroupApplication({
-        handleAction: this.action,
-        handleMessage: this.text,
-        message: this.message
-      }).then(() => {
-        this.$store.commit('showToast', {
-          title: '处理完成'
+  onShow () {
+    let interval = setInterval(() => {
+      if (this.currentMessageList.length !== 0) {
+        wx.pageScrollTo({
+          scrollTop: 99999
         })
-      }).catch((err) => {
-        console.log(err)
-        this.modal()
+        clearInterval(interval)
+      }
+    }, 600)
+  },
+  methods: {
+    handleClick (message) {
+      wx.showActionSheet({
+        itemList: ['同意', '拒绝'],
+        success: res => {
+          const option = {
+            handleAction: 'Agree',
+            handleMessage: '欢迎进群',
+            message
+          }
+          if (res.tapIndex === 1) {
+            option.handleAction = 'Reject'
+            option.handleMessage = '拒绝申请'
+          }
+          wx.$app.handleGroupApplication(option)
+            .then(() => {
+              wx.showToast({ title: option.handleAction === 'Agree' ? '已同意申请' : '已拒绝申请' })
+              this.$store.commit('removeMessage', message)
+            }).catch((error) => {
+              wx.showToast({
+                title: error.message || '处理失败',
+                icon: 'none'
+              })
+            })
+        }
       })
     }
   }
@@ -91,7 +91,8 @@ export default {
   background-color #f0faff
   border-radius 12px
   .time
-    color $light-primary
+    font-weight 600
+    color $base
 .button
   color white
   background-color $primary

@@ -2,7 +2,7 @@ package com.tencent.qcloud.tim.uikit.component.dialog;
 
 import android.app.Dialog;
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,7 +20,7 @@ import com.tencent.qcloud.tim.uikit.R;
 public class TUIKitDialog {
 
     private Context mContext;
-    private Dialog dialog;
+    protected Dialog dialog;
     private LinearLayout mBackgroundLayout;
     private LinearLayout mMainLayout;
     private TextView mTitleTv;
@@ -69,7 +69,7 @@ public class TUIKitDialog {
         mLineImg = (ImageView) view.findViewById(R.id.img_line);
         mLineImg.setVisibility(View.GONE);
 
-        dialog = new Dialog(mContext, R.style.AlertDialogStyle);
+        dialog = new Dialog(mContext, R.style.TUIKit_AlertDialogStyle);
         dialog.setContentView(view);
 
         mBackgroundLayout.setLayoutParams(new FrameLayout.LayoutParams((int) (mDisplay.getWidth() * dialogWidth), LayoutParams.WRAP_CONTENT));

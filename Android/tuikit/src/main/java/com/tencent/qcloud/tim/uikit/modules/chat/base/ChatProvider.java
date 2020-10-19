@@ -2,8 +2,8 @@ package com.tencent.qcloud.tim.uikit.modules.chat.base;
 
 import android.text.TextUtils;
 
-import com.tencent.imsdk.TIMMessage;
-import com.tencent.imsdk.ext.message.TIMMessageLocator;
+import com.tencent.imsdk.v2.V2TIMMessage;
+import com.tencent.imsdk.v2.V2TIMMessageReceipt;
 import com.tencent.qcloud.tim.uikit.modules.chat.interfaces.IChatProvider;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.MessageLayout;
 import com.tencent.qcloud.tim.uikit.modules.chat.layout.message.MessageListAdapter;
@@ -18,6 +18,7 @@ public class ChatProvider implements IChatProvider {
     private ArrayList<MessageInfo> mDataSource = new ArrayList();
 
     private MessageListAdapter mAdapter;
+    private TypingListener mTypingListener;
 
     @Override
     public List<MessageInfo> getDataSource() {
@@ -26,13 +27,20 @@ public class ChatProvider implements IChatProvider {
 
     @Override
     public boolean addMessageList(List<MessageInfo> msgs, boolean front) {
+        List<MessageInfo> list = new ArrayList<>();
+        for (MessageInfo info : msgs) {
+            if (checkExist(info)) {
+                continue;
+            }
+            list.add(info);
+        }
         boolean flag;
         if (front) {
-            flag = mDataSource.addAll(0, msgs);
-            updateAdapter(MessageLayout.DATA_CHANGE_TYPE_ADD_FRONT, msgs.size());
+            flag = mDataSource.addAll(0, list);
+            updateAdapter(MessageLayout.DATA_CHANGE_TYPE_ADD_FRONT, list.size());
         } else {
-            flag = mDataSource.addAll(msgs);
-            updateAdapter(MessageLayout.DATA_CHANGE_TYPE_ADD_BACK, msgs.size());
+            flag = mDataSource.addAll(list);
+            updateAdapter(MessageLayout.DATA_CHANGE_TYPE_ADD_BACK, list.size());
         }
         return flag;
     }
@@ -41,8 +49,8 @@ public class ChatProvider implements IChatProvider {
         if (msg != null) {
             String msgId = msg.getId();
             for (int i = mDataSource.size() - 1; i >= 0; i--) {
-                if (mDataSource.get(i).getTIMMessage().getMsgId().equals(msgId)
-                        && mDataSource.get(i).getTIMMessage().getMsgUniqueId() == msg.getTIMMessage().getMsgUniqueId()
+                if (mDataSource.get(i).getId().equals(msgId)
+                        && mDataSource.get(i).getUniqueId() == msg.getUniqueId()
                         && TextUtils.equals(mDataSource.get(i).getExtra().toString(), msg.getExtra().toString())) {
                     return true;
                 }
@@ -78,6 +86,7 @@ public class ChatProvider implements IChatProvider {
         List<MessageInfo> list = new ArrayList<>();
         for (MessageInfo info : msg) {
             if (checkExist(info)) {
+                updateTIMMessageStatus(info);
                 continue;
             }
             list.add(info);
@@ -112,6 +121,21 @@ public class ChatProvider implements IChatProvider {
         return false;
     }
 
+    public boolean resendMessageInfo(MessageInfo message) {
+        boolean found = false;
+        for (int i = 0; i < mDataSource.size(); i++) {
+            if (mDataSource.get(i).getId().equals(message.getId())) {
+                mDataSource.remove(i);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return false;
+        }
+        return addMessageInfo(message);
+    }
+
     public boolean updateMessageInfo(MessageInfo message) {
         for (int i = 0; i < mDataSource.size(); i++) {
             if (mDataSource.get(i).getId().equals(message.getId())) {
@@ -124,20 +148,17 @@ public class ChatProvider implements IChatProvider {
         return false;
     }
 
-    public boolean updateMessageRevoked(TIMMessageLocator locator) {
+    public boolean updateTIMMessageStatus(MessageInfo message) {
         for (int i = 0; i < mDataSource.size(); i++) {
-            MessageInfo messageInfo = mDataSource.get(i);
-            TIMMessage msg = messageInfo.getTIMMessage();
-            // 一条包含多条元素的消息，撤回时，会把所有元素都撤回，所以下面的判断即使满足条件也不能return
-            if (msg.checkEquals(locator)) {
-                messageInfo.setMsgType(MessageInfo.MSG_STATUS_REVOKE);
-                messageInfo.setStatus(MessageInfo.MSG_STATUS_REVOKE);
+            if (mDataSource.get(i).getId().equals(message.getId())
+                    && mDataSource.get(i).getStatus() != message.getStatus()) {
+                mDataSource.get(i).setStatus(message.getStatus());
                 updateAdapter(MessageLayout.DATA_CHANGE_TYPE_UPDATE, i);
+                return true;
             }
         }
         return false;
     }
-
 
     public boolean updateMessageRevoked(String msgId) {
         for (int i = 0; i < mDataSource.size(); i++) {
@@ -152,6 +173,29 @@ public class ChatProvider implements IChatProvider {
         return false;
     }
 
+    public void updateReadMessage(V2TIMMessageReceipt max) {
+        for (int i = 0; i < mDataSource.size(); i++) {
+            MessageInfo messageInfo = mDataSource.get(i);
+            if (messageInfo.getMsgTime() > max.getTimestamp()) {
+                messageInfo.setPeerRead(false);
+            } else if (messageInfo.isPeerRead()) {
+                // do nothing
+            } else {
+                messageInfo.setPeerRead(true);
+                updateAdapter(MessageLayout.DATA_CHANGE_TYPE_UPDATE, i);
+            }
+        }
+    }
+
+    public void notifyTyping() {
+        if (mTypingListener != null) {
+            mTypingListener.onTyping();
+        }
+    }
+
+    public void setTypingListener(TypingListener l) {
+        mTypingListener = l;
+    }
 
     public void remove(int index) {
         mDataSource.remove(index);
@@ -163,7 +207,6 @@ public class ChatProvider implements IChatProvider {
         updateAdapter(MessageLayout.DATA_CHANGE_TYPE_LOAD, 0);
     }
 
-
     private void updateAdapter(int type, int data) {
         if (mAdapter != null) {
             mAdapter.notifyDataSourceChanged(type, data);
@@ -174,4 +217,7 @@ public class ChatProvider implements IChatProvider {
         this.mAdapter = adapter;
     }
 
+    public interface TypingListener {
+        void onTyping();
+    }
 }
