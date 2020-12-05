@@ -26,7 +26,6 @@
 #import "TUIFileMessageCell.h"
 #import "TUIGroupLiveMessageCell.h"
 #import "TUserProfileController.h"
-#import "TIMFriendshipManager.h"
 #import "TUIKit.h"
 #import "ReactiveObjC/ReactiveObjC.h"
 #import "MMLayout/UIView+MMLayout.h"
@@ -38,12 +37,12 @@
 #import "TUILiveRoomAudienceViewController.h"
 #import "TUILiveDefaultGiftAdapterImp.h"
 #import "TUIKitLive.h"
-#import "V2TIMManager.h"
 #import "TUILiveUserProfile.h"
 #import "TUILiveRoomManager.h"
 #import "TUILiveHeartBeatManager.h"
 #import "GenerateTestUserSig.h"
 #import "Toast.h"
+#import <ImSDK/ImSDK.h>
 
 
 // MLeaksFinder 会对这个类误报，这里需要关闭一下
@@ -77,7 +76,7 @@ TUILiveRoomAnchorDelegate>
     [moreMenus addObject:({
         TUIInputMoreCellData *data = [TUIInputMoreCellData new];
         data.image = [UIImage tk_imageNamed:@"more_custom"];
-        data.title = @"自定义";
+        data.title = NSLocalizedString(@"MoreCustom", nil);
         data;
     })];
     _chat.moreMenus = moreMenus;
@@ -256,7 +255,7 @@ TUILiveRoomAnchorDelegate>
 
 - (void)chatController:(TUIChatController *)chatController onSelectMoreCell:(TUIInputMoreCell *)cell
 {
-    if ([cell.data.title isEqualToString:@"自定义"]) {
+    if ([cell.data.title isEqualToString:NSLocalizedString(@"MoreCustom", nil)]) {
         NSString *text = @"欢迎加入腾讯·云通信大家庭！";
         NSString *link = @"https://cloud.tencent.com/document/product/269/3794";
         MyCustomCellData *cellData = [[MyCustomCellData alloc] initWithDirection:MsgDirectionOutgoing];

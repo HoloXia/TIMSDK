@@ -71,13 +71,16 @@
 - 为了更好的了解您使用TIMSDK所遇到的问题，方便快速有效定位解决TIMSDK问题，希望您按如下反馈指引反馈issue，方便我们尽快解决您的问题
 - [TIMSDK issue反馈指引](https://github.com/tencentyun/TIMSDK/wiki/TIMSDK-issue%E6%9C%89%E6%95%88%E5%8F%8D%E9%A6%88%E6%A8%A1%E6%9D%BF)
 
-## 说明
-  - 从 5.0 版本开始，SDK 新增精简版，原有版本称为标准版。
-  - 精简版在标准版的基础上裁剪了好友列表和会话列表两项能力，并对部分业务逻辑做了优化，以实现更高的执行效率，更小的安装包增量。
-  - 与标准版相比，精简版在 SDK 体积和安装包增量上都有3倍 - 4倍的缩减。如果您的 App 没有使用到好友列表和会话列表相关的功能，同时又特别关注安装包增量，建议您选择精简版。
 
-## 标准版与精简版差异对照表
-精简版目前支持 Android 和 iOS 两个平台，后续会逐步增加对 Windows 和 Mac 平台的支持。下面以 Android 和 iOS 平台下的 SDK 为主，对比一下标准版和精简版的差异。
+
+## 标准版与精简版差异对比
+- SDK 从5.0版本开始新增精简版，原有版本称为标准版。
+- 精简版与标准版同时支持 V2 API，在接口能力上完全一致。
+- 精简版不再支持旧版 API，标准版继续支持旧版 API。
+- 在 SDK 体积和安装包增量上，精简版与标准版相比有大幅度缩减。
+- 精简版目前支持 Android 和 iOS 两个平台，后续会逐步增加对 Windows 和 Mac 平台的支持。
+- 如果您没有接入过旧版 API，建议您直接使用 V2 API，选择精简版 SDK。
+- 如果您已经接入了旧版 API，推荐您升级到 V2 API，逐步切换到精简版 SDK。
 
 ### SDK 体积大小对比
 <table>
@@ -91,13 +94,13 @@
     <td style="text-align:center">Android</td>
     <td style="text-align:center">aar 大小</td>
     <td style="text-align:center">7.8 MB</td>
-    <td style="text-align:center">2.5 MB</td>
+    <td style="text-align:center">3.1 MB</td>
   </tr>
   <tr>
     <td style="text-align:center">iOS</td>
     <td style="text-align:center">framework 大小</td>
     <td style="text-align:center">57.7 MB</td>
-    <td style="text-align:center">9.2 MB</td>
+    <td style="text-align:center">11.2 MB</td>
   </tr>
 </table>
 
@@ -113,156 +116,18 @@
     <td rowspan='2' style="text-align:center">apk 增量</td>
     <td style="text-align:center">armeabi-v7a</td>
     <td style="text-align:center">3.2 MB</td>
-    <td style="text-align:center">934 KB</td>
+    <td style="text-align:center">1.1 MB</td>
   </tr>
   <tr>
     <td style="text-align:center">arm64-v8a</td>
     <td style="text-align:center">5.2 MB</td>
-    <td style="text-align:center">1.4 MB</td>
+    <td style="text-align:center">1.7 MB</td>
   </tr>
   <tr>
     <td style="text-align:center">ipa 增量</td>
     <td style="text-align:center">arm64</td>
     <td style="text-align:center">2.1 MB</td>
-    <td style="text-align:center">908 KB</td>
-  </tr>
-</table>
-
-### 功能差异对比
-<table>
-  <tr>
-    <th width="200px" style="text-align:center">功能模块</th>
-    <th width="260px" style="text-align:center">功能项</th>
-    <th width="200px" style="text-align:center">标准版</th>
-    <th width="200px" style="text-align:center">精简版</th>
-  </tr>
-  <tr>
-    <td rowspan='2' style="text-align:center;">资料</td>
-    <td style="text-align:center">修改自己资料</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">获取他人资料</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td rowspan='5' style="text-align:center">群</td>
-    <td style="text-align:center">创建群 销毁群 加群 退群</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">群资料管理</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  </tr>
-  <tr>
-    <td style="text-align:center">群成员管理</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">群申请列表</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">群自定义属性</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td rowspan='5' style="text-align:center">消息</td>
-    <td style="text-align:center">消息发送与接收</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">消息已读与回执</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">消息撤回</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">消息多端同步</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">获取历史消息列表</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td rowspan='1' style="text-align:center">信令</td>
-    <td style="text-align:center">信令发送与响应</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  </tr>
-  <tr>
-    <td rowspan='2' style="text-align:center">离线推送</td>
-    <td style="text-align:center">Android 离线推送</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">iOS 离线推送</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">&#10003</td>
-  <tr>
-    <td rowspan='5' style="text-align:center">关系链</td>
-    <td style="text-align:center">添加好友</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</tdh>
-  </tr>
-  <tr>
-    <td style="text-align:center">好友资料管理</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">好友申请列表</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">好友分组</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">好友黑名单</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
-  <tr>
-  <tr>
-    <td rowspan='4' width="100px" style="text-align:center">会话</td>
-    <td style="text-align:center">获取会话列表</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">获取会话未读消息数</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">会话管理</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
-  </tr>
-  <tr>
-    <td style="text-align:center">设置会话草稿</td>
-    <td style="text-align:center">&#10003</td>
-    <td style="text-align:center">-</td>
+    <td style="text-align:center">1.1 MB</td>
   </tr>
 </table>
 
@@ -305,32 +170,34 @@ end
 
 更多集成方式请参考 <a href="https://cloud.tencent.com/document/product/269/32673">集成 SDK</a>
 
-## 标准版 5.0.10 @2020.10.15
+## 最新精简版 5.1.115 @2020.12.04
 
 ### SDK
+**通用变更点**
+- 优化信令超时时间与服务器时间同步
+- 修复弱网下建连偶现失败的问题
 
-**iOS/Android平台**
+**iOS 平台**
+- 完善 API 头文件
 
-- 优化信令接口，支持设置在线消息 onlineUserOnly 和离线推送信息 offlinePushInfo 参数
-- 优化获取单个会话接口的异步回调
-- 会话增加获取群类型接口，方便会话列表展示过滤
+**Android 平台**
+- JSON 替换 Gson 修复崩溃问题
 
-### TUIKit & Demo
-
-**iOS/Android**
-- 新增群直播功能，连麦、送礼、美颜、变声等功能一应俱全
-- 新增直播大厅，支持连麦、PK、点赞、送礼、美颜、弹幕、好友关注等
-- 优化语音视频信令识别问题
-
-
-## 精简版 5.0.106 @2020.09.21
+## 最新标准版 5.1.10 @2020.12.04
 
 ### SDK
 
 **通用变更点**
 
-- 修复已知稳定性问题
-
-## TUIKit 开源贡献榜
+- V2 API 增加群自定义字段和消息多 Element 支持
+- V2 API 增加向本地插入 C2C 消息的接口
+- 优化普通群和直播群丢消息问题
+- 修复发送失败的消息无法删除的问题
+- 修复 C2C 会话里，发送的第一消息是在线消息的情况下，收不到已读回执的问题
+- 修复已经撤回的消息，通过拉历史消息的接口返回后，消息状态不正确的问题
+- 修复 iOS 平台获取好友分组的接口传入空分组名时，不能返回所有分组信息的问题
+- 修复稳定性问题
 
 谁是第一位英雄，请现身！
+
+

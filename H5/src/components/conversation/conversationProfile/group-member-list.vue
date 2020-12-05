@@ -1,7 +1,7 @@
 <template>
   <div class="group-member-list-wrapper">
     <div class="header">
-      <span class="member-count text-ellipsis">群成员：{{currentConversation.groupProfile.memberNum}}</span>
+      <span class="member-count text-ellipsis">群成员：{{currentConversation.groupProfile.memberCount}}</span>
       <popover v-model="addGroupMemberVisible">
         <add-group-member></add-group-member>
         <div slot="reference" class="btn-add-member" title="添加群成员">
@@ -57,7 +57,7 @@ export default {
       currentMemberList: state => state.group.currentMemberList
     }),
     showLoadMore() {
-      return this.members.length < this.groupProfile.memberNum
+      return this.members.length < this.groupProfile.memberCount
     },
     members() {
       return this.currentMemberList.slice(0, this.count)
@@ -118,8 +118,8 @@ export default {
       flex-wrap wrap
       width 100%
     .group-member
-      width 60px
-      height 60px
+      width 40px
+      height 70px
       display: flex;
       justify-content center
       align-content center
@@ -127,13 +127,15 @@ export default {
       text-align: center;
       color: $black;
       cursor: pointer;
+      margin: 0 20px 10px 0;
+      padding: 10px 0 0 0;
       .avatar
         width 40px
         height 40px
         border-radius 50%
       .member-name
         font-size 12px
-        width: 40px;
+        width: 50px;
         text-align center
   .more
     padding 0 20px
